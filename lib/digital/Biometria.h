@@ -5,19 +5,21 @@
 #include <Arduino.h>
 #include <Adafruit_Fingerprint.h>
 
+const uint32_t password = 0x0;
+
 class Biometria
 {
     private:
         // const uint32_t password;
-        void setupFingerprintSensor();
-        static HardwareSerial HSerial;
-        Adafruit_Fingerprint fingerprintSensor;
+        // static HardwareSerial HSerial;
+        Adafruit_Fingerprint fingerprintSensor = Adafruit_Fingerprint(&Serial2, password);
     public:
         //métodos
 
         Biometria();
+        void setupFingerprintSensor();
         void criarDigital(int id);
-        int verificarDigital(void);
+        void verificarDigital(void);
         void apagarDigital(int id);
         void apagarTodasDigitais(void);
 

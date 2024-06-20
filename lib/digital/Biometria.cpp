@@ -1,7 +1,10 @@
 #include "Biometria.h"
+#include "Display.h"
+
 #define pinRX_bio 16
 #define pinTX_bio 17
 
+Display displayBio;
 // const uint32_t password = 0x0;
 
 // HardwareSerial Biometria::HSerial(2);
@@ -54,7 +57,9 @@ void Biometria::criarDigital(int location)
         return;
     }
 
+    
     Serial.println(F("Encoste o dedo no sensor"));
+    displayBio.displayPrint("Encoste o dedo no sensor");
 
     // Espera até pegar uma imagem válida da digital
     while (fingerprintSensor.getImage() != FINGERPRINT_OK)
@@ -65,10 +70,13 @@ void Biometria::criarDigital(int location)
     {
         // Se chegou aqui deu erro, então abortamos os próximos passos
         Serial.println(F("Erro image2Tz 1"));
+        
+        
         return;
     }
 
     Serial.println(F("Tire o dedo do sensor"));
+    displayBio.displayPrint("Tire o dedo do sensor");
 
     delay(2000);
 
@@ -78,6 +86,7 @@ void Biometria::criarDigital(int location)
 
     // Antes de guardar precisamos de outra imagem da mesma digital
     Serial.println(F("Encoste o mesmo dedo no sensor"));
+     displayBio.displayPrint("Encoste o mesmo dedo no sensor");
 
     // Espera até pegar uma imagem válida da digital
     while (fingerprintSensor.getImage() != FINGERPRINT_OK)
@@ -109,6 +118,7 @@ void Biometria::criarDigital(int location)
 
     // Se chegou aqui significa que todos os passos foram bem sucedidos
     Serial.println(F("Sucesso!!!"));
+    displayBio.displayPrint("Digital salva com sucesso!");
 }
 
 void Biometria::verificarDigital(void)

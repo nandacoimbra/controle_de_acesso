@@ -34,25 +34,17 @@ void Comandos::executarComandos(String cmd)
   }
   else if (cmd.substring(0, 2) == "VD") // Verificar digital
   {
-    // digital.verificarDigital();
+    digital.verificarDigital();
   }
   else if (cmd.substring(0, 2) == "AD") // Deletar digital
   {
     int pos_igual = cmd.indexOf("=", 0);
     String id_str = cmd.substring(pos_igual + 1);
-    // digital.apagarDigital(id_str.toInt());
+    digital.apagarDigital(id_str.toInt());
   }
   else if (cmd.substring(0, 3) == "ATD") // Deletar digital
   {
-    // digital.apagarTodasDigitais();
+    digital.apagarTodasDigitais();
   }
-  else if (cmd == "#") // Interação Display
-  {
-    // estadoTela = 2;
-
-    // if (cmd == "#")
-    // {
-    //   // SENHA
-    // }
-  }
+  
 }

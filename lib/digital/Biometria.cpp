@@ -14,16 +14,16 @@
 //     Biometria::HSerial.begin(57600, SERIAL_8N1, pinRX_bio, pinTX_bio);
 //     Biometria::setupFingerprintSensor();
 // }
-Biometria::Biometria(Display D) : fingerprintSensor(&Serial2, password)
+Biometria::Biometria(Display &display) : fingerprintSensor(&Serial2, password)
 {
-    Biometria::displayBio = D;
+    Biometria::displayBio = display;
     // Biometria::setupFingerprintSensor();
 }
 
-// Biometria::Biometria()
-// {
+Biometria::Biometria(): fingerprintSensor(&Serial2, password)
+{
 
-// }
+}
 
 String getCommand()
 {

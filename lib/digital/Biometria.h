@@ -21,9 +21,9 @@ class Biometria
     public:
         //métodos
 
-        // Biometria();
+        Biometria();
         int confiancaBiometria;
-        Biometria(Display D);
+        Biometria(Display &display);
         void setupFingerprintSensor();
         void criarDigital(int id);
         int identificaUsuario(int confianca);

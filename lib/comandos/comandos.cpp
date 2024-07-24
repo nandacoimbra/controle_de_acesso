@@ -1,46 +1,58 @@
 #include "Comandos.h"
 
-Comandos::Comandos(Biometria D) : digital(D)
+Comandos::Comandos(Biometria biometria) : digital(biometria)
 {
-  CMD = "";
- // digital = D;
+  comando = "";
+  digital = biometria;
 }
 
 String Comandos::buscaComando()
 {
-  while(!Serial.available()) delay(100);
+  while (!Serial.available())
+    delay(100);
   return Serial.readStringUntil('\n');
 }
 
-void Comandos::executarComandos()
+String Comandos::lerSerial()
 {
-    if (CMD.substring(0, 2) == "CD") // Criar Digital: CD=01
-    {
-      int pos_igual = CMD.indexOf("=", 0);
-      String id_str = CMD.substring(pos_igual + 1);
-      //digital.criarDigital(id_str.toInt());
-    }
-    else if (CMD.substring(0, 2) == "VD") // Verificar digital
-    {
-      //digital.verificarDigital();
-    }
-    else if (CMD.substring(0, 2) == "AD") // Deletar digital
-    {
-      int pos_igual = CMD.indexOf("=", 0);
-      String id_str = CMD.substring(pos_igual + 1);
-      //digital.apagarDigital(id_str.toInt());
-    }
-    else if (CMD.substring(0, 3) == "ATD") // Deletar digital
-    {
-      //digital.apagarTodasDigitais();
-    }
-    else if (CMD == "#") // Interação Display
-    {
-      //estadoTela = 2;
+  String comandoSerial = "";
+  if (Serial.available())
+  {
+    comandoSerial = Serial.readString();
+    comandoSerial.toUpperCase();
+    return comandoSerial;
+  }
+}
 
-      // if (CMD == "#")
-      // {
-      //   // SENHA
-      // }
-    }
+void Comandos::executarComandos(String cmd)
+{
+  if (cmd.substring(0, 2) == "CD") // Criar Digital: CD=01
+  {
+    int pos_igual = cmd.indexOf("=", 0);
+    String id_str = cmd.substring(pos_igual + 1);
+    digital.criarDigital(id_str.toInt());
+  }
+  else if (cmd.substring(0, 2) == "VD") // Verificar digital
+  {
+    // digital.verificarDigital();
+  }
+  else if (cmd.substring(0, 2) == "AD") // Deletar digital
+  {
+    int pos_igual = cmd.indexOf("=", 0);
+    String id_str = cmd.substring(pos_igual + 1);
+    // digital.apagarDigital(id_str.toInt());
+  }
+  else if (cmd.substring(0, 3) == "ATD") // Deletar digital
+  {
+    // digital.apagarTodasDigitais();
+  }
+  else if (cmd == "#") // Interação Display
+  {
+    // estadoTela = 2;
+
+    // if (cmd == "#")
+    // {
+    //   // SENHA
+    // }
+  }
 }

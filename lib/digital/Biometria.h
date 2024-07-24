@@ -22,9 +22,12 @@ class Biometria
         //métodos
 
         // Biometria();
+        int confiancaBiometria;
         Biometria(Display D);
         void setupFingerprintSensor();
         void criarDigital(int id);
+        int identificaUsuario(int confianca);
+        bool leitorTocado();
         bool verificarDigital(void);
         void apagarDigital(int id);
         void apagarTodasDigitais(void);

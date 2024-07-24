@@ -9,11 +9,12 @@
 class Comandos
 {
   public:
-    String CMD;
+    String comando;
     Biometria digital;
-    Comandos(Biometria D);
+    Comandos(Biometria biometria);
     String buscaComando();
-    void executarComandos();
+    String lerSerial();
+    void executarComandos(String cmd);
 };
 
 #endif

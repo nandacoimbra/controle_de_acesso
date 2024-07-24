@@ -1,10 +1,10 @@
 #include "Biometria.h"
 
-//#define pinRX_bio 16
-//#define pinTX_bio 17
+// #define pinRX_bio 16
+// #define pinTX_bio 17
 
-//Display displayBio;
-// const uint32_t password = 0x0;
+// Display displayBio;
+//  const uint32_t password = 0x0;
 
 // HardwareSerial Biometria::HSerial(2);
 // //Adafruit_Fingerprint fingerprintSensor = Adafruit_Fingerprint(&Serial2, password);
@@ -17,10 +17,10 @@
 Biometria::Biometria(Display D) : fingerprintSensor(&Serial2, password)
 {
     Biometria::displayBio = D;
-    Biometria::setupFingerprintSensor();
+    // Biometria::setupFingerprintSensor();
 }
 
-// Biometria::Biometria() 
+// Biometria::Biometria()
 // {
 
 // }
@@ -63,7 +63,6 @@ void Biometria::criarDigital(int location)
         return;
     }
 
-    
     Serial.println(F("Encoste o dedo no sensor"));
     displayBio.displayPrint("Encoste o dedo no sensor");
 
@@ -76,8 +75,7 @@ void Biometria::criarDigital(int location)
     {
         // Se chegou aqui deu erro, então abortamos os próximos passos
         Serial.println(F("Erro image2Tz 1"));
-        
-        
+
         return;
     }
 
@@ -92,7 +90,7 @@ void Biometria::criarDigital(int location)
 
     // Antes de guardar precisamos de outra imagem da mesma digital
     Serial.println(F("Encoste o mesmo dedo no sensor"));
-     displayBio.displayPrint("Encoste o mesmo dedo no sensor");
+    displayBio.displayPrint("Encoste o mesmo dedo no sensor");
 
     // Espera até pegar uma imagem válida da digital
     while (fingerprintSensor.getImage() != FINGERPRINT_OK)
@@ -125,6 +123,22 @@ void Biometria::criarDigital(int location)
     // Se chegou aqui significa que todos os passos foram bem sucedidos
     Serial.println(F("Sucesso!!!"));
     displayBio.displayPrint("Digital salva com sucesso!");
+}
+
+int Biometria::identificaUsuario(int confianca)
+{
+    if (fingerprintSensor.image2Tz() != FINGERPRINT_OK)
+        return -1;
+    if (fingerprintSensor.fingerFastSearch() != FINGERPRINT_OK)
+        return -1;
+    if (fingerprintSensor.confidence < confianca)
+        return -1;
+    return fingerprintSensor.fingerID;
+
+}
+
+bool Biometria::leitorTocado(){
+    return fingerprintSensor.getImage() == FINGERPRINT_OK;
 }
 
 bool Biometria::verificarDigital(void)

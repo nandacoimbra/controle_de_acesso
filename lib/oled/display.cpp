@@ -10,8 +10,9 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-Display::Display(){
-
+Display::Display()
+{
+    Display::displaySetup();
 }
 
 void Display::displaySetup()

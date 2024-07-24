@@ -1,10 +1,9 @@
 #include "Biometria.h"
-#include "Display.h"
 
-#define pinRX_bio 16
-#define pinTX_bio 17
+//#define pinRX_bio 16
+//#define pinTX_bio 17
 
-Display displayBio;
+//Display displayBio;
 // const uint32_t password = 0x0;
 
 // HardwareSerial Biometria::HSerial(2);
@@ -15,9 +14,16 @@ Display displayBio;
 //     Biometria::HSerial.begin(57600, SERIAL_8N1, pinRX_bio, pinTX_bio);
 //     Biometria::setupFingerprintSensor();
 // }
-Biometria::Biometria()
+Biometria::Biometria(Display D) : fingerprintSensor(&Serial2, password)
 {
+    Biometria::displayBio = D;
+    Biometria::setupFingerprintSensor();
 }
+
+// Biometria::Biometria() 
+// {
+
+// }
 
 String getCommand()
 {
@@ -121,7 +127,7 @@ void Biometria::criarDigital(int location)
     displayBio.displayPrint("Digital salva com sucesso!");
 }
 
-void Biometria::verificarDigital(void)
+bool Biometria::verificarDigital(void)
 {
     Serial.println(F("Encoste o dedo no sensor"));
 
@@ -134,7 +140,7 @@ void Biometria::verificarDigital(void)
     {
         // Se chegou aqui deu erro, então abortamos os próximos passos
         Serial.println(F("Erro image2Tz"));
-        return;
+        return false;
     }
 
     // Procura por este padrão no banco de digitais
@@ -142,7 +148,7 @@ void Biometria::verificarDigital(void)
     {
         // Se chegou aqui significa que a digital não foi encontrada
         Serial.println(F("Digital não encontrada"));
-        return;
+        return false;
     }
 
     // Se chegou aqui a digital foi encontrada
@@ -152,6 +158,7 @@ void Biometria::verificarDigital(void)
     Serial.print(fingerprintSensor.confidence);
     Serial.print(F(" na posição "));
     Serial.println(fingerprintSensor.fingerID);
+    return true;
 }
 
 void Biometria::apagarDigital(int location)

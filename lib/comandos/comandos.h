@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "Stream.h"
 #include "Biometria.h"
+#include "Teclado.h"
 
 
 class Comandos
@@ -11,6 +12,7 @@ class Comandos
   public:
     String comando;
     Biometria digital;
+    Teclado keypad;
     Comandos(Biometria biometria);
     String buscaComando();
     String lerSerial();

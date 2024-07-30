@@ -17,6 +17,7 @@ class Display
     void displaySetup(void);
     void displayConfig(void);
     void telaInicial(void);
+    void menuTeclado(void);
     void digitarId(void);
     void displayPrint (String);
 };

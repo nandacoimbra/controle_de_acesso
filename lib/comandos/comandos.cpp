@@ -1,9 +1,10 @@
 #include "Comandos.h"
 
-Comandos::Comandos(Biometria biometria) : digital(biometria)
+Comandos::Comandos(Biometria biometria) : digital(biometria) 
 {
   comando = "";
   digital = biometria;
+
 }
 
 String Comandos::buscaComando()
@@ -46,5 +47,8 @@ void Comandos::executarComandos(String cmd)
   {
     digital.apagarTodasDigitais();
   }
-  
+  else if (cmd.substring(0, 3) == "DID") // Digitar ID
+  {
+    
+  }
 }

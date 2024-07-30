@@ -48,17 +48,40 @@ void Display::telaInicial()
     display.println("Controle de Acesso");
     display.println("Pressione #");
     display.display();
+    // teste display queimado
+    Serial.println("Bem Vindo!");
+    Serial.println("Controle de Acesso");
+    Serial.println("Pressione #");
+}
+void Display::menuTeclado(void)
+{
+    Serial.println("menu teclado");
+    displayConfig();
+    display.println("1 - Abrir porta");
+    display.println("2 - Adicionar usuario");
+    display.println("2 - Remover usuario");
+    display.display();
+    // teste display queimado
+    Serial.println("1 - Abrir porta");
+    Serial.println("2 - Adicionar usuario");
+    Serial.println("2 - Remover usuario");
 }
 void Display::digitarId()
 {
+    Serial.println("digitar id");
     displayConfig();
     display.println("Digite o ID");
     display.println("ID: ");
     display.println("Pressione #");
     display.display();
+    // teste display queimado
+    Serial.println("Digite o ID");
+    Serial.println("ID: ");
+    Serial.println("Pressione #");
 }
 
-void Display::displayPrint(String mensagem){
+void Display::displayPrint(String mensagem)
+{
     displayConfig();
     display.println(mensagem);
     display.display();

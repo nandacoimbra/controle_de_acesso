@@ -1,25 +1,12 @@
 #include "Display.h"
 
-// teclado e oled usam esses pinos
-#define SDA_PIN 22
-#define SCL_PIN 23
-
-// configurações oled
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-
-Display::Display()
+Display::Display() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1)
 {
     // Display::displaySetup();
 }
 
 void Display::displaySetup()
 {
-
-    // Inicializando a comunicação I2C
-    Wire.begin(SDA_PIN, SCL_PIN);
     // Inicializando o display
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
     {
@@ -35,7 +22,6 @@ void Display::displayConfig()
 {
     // Limpando o buffer do display
     display.clearDisplay();
-    // Desenhando alguns textos
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 0);
@@ -59,12 +45,12 @@ void Display::menuTeclado(void)
     displayConfig();
     display.println("1 - Abrir porta");
     display.println("2 - Adicionar usuario");
-    display.println("2 - Remover usuario");
+    display.println("3 - Remover usuario");
     display.display();
     // teste display queimado
     Serial.println("1 - Abrir porta");
     Serial.println("2 - Adicionar usuario");
-    Serial.println("2 - Remover usuario");
+    Serial.println("3 - Remover usuario");
 }
 void Display::digitarId()
 {
@@ -80,9 +66,22 @@ void Display::digitarId()
     Serial.println("Pressione #");
 }
 
+void Display::digitarSenha(void)
+{
+    display.println("Digite a senha: ");
+    display.println("Senha: ");
+    display.println("Pressione #");
+    display.display();
+}
+
 void Display::displayPrint(String mensagem)
 {
     displayConfig();
     display.println(mensagem);
+    display.display();
+}
+
+void Display::desenhaTexto(String texto){
+    display.print(texto);
     display.display();
 }

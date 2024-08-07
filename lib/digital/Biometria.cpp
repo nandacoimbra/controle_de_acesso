@@ -1,40 +1,8 @@
 #include "Biometria.h"
 
-// #define pinRX_bio 16
-// #define pinTX_bio 17
-
-// Display displayBio;
-//  const uint32_t password = 0x0;
-
-// HardwareSerial Biometria::HSerial(2);
-// //Adafruit_Fingerprint fingerprintSensor = Adafruit_Fingerprint(&Serial2, password);
-
-// Biometria::Biometria() : fingerprintSensor(&HSerial, password)
-// {
-//     Biometria::HSerial.begin(57600, SERIAL_8N1, pinRX_bio, pinTX_bio);
-//     Biometria::setupFingerprintSensor();
-// }
-Biometria::Biometria(Display &display) : fingerprintSensor(&Serial2, password)
+Biometria::Biometria() : fingerprintSensor(&Serial2, password)
 {
-    Biometria::displayBio = display;
-    // Biometria::setupFingerprintSensor();
-}
-
-Biometria::Biometria(): fingerprintSensor(&Serial2, password)
-{
-
-}
-
-String getCommand()
-{
-    // Espera até que haja dados disponíveis no buffer serial
-    while (!Serial.available())
-    {
-        // Espera
-    }
-
-    // Lê a string do buffer serial
-    return Serial.readStringUntil('\n'); // Lê até encontrar uma nova linha
+    
 }
 
 void Biometria::setupFingerprintSensor()
@@ -53,176 +21,59 @@ void Biometria::setupFingerprintSensor()
     Serial.println(F("Sensor de Biometria Inicializado!"));
 }
 
-void Biometria::criarDigital(int location)
+bool Biometria::iniciaCriacaoDigital()
+{
+    // Considera que a digital foi tocada e imagem existe
+    // Converte a imagem para o primeiro padrão
+    return fingerprintSensor.image2Tz(1) == FINGERPRINT_OK;
+}
+
+bool Biometria::finalizaCriacaoDigital(int id)
 {
     // Verifica se a posição é válida ou não
-    if (location < 1 || location > 149)
-    {
-        // Se chegou aqui a posição digitada é inválida, então abortamos os próximos passos
-        Serial.println(F("Posição inválida"));
-        return;
-    }
-
-    Serial.println(F("Encoste o dedo no sensor"));
-    displayBio.displayPrint("Encoste o dedo no sensor");
-
-    // Espera até pegar uma imagem válida da digital
-    while (fingerprintSensor.getImage() != FINGERPRINT_OK)
-        ;
-
-    // Converte a imagem para o primeiro padrão
-    if (fingerprintSensor.image2Tz(1) != FINGERPRINT_OK)
-    {
-        // Se chegou aqui deu erro, então abortamos os próximos passos
-        Serial.println(F("Erro image2Tz 1"));
-
-        return;
-    }
-
-    Serial.println(F("Tire o dedo do sensor"));
-    displayBio.displayPrint("Tire o dedo do sensor");
-
-    delay(2000);
-
-    // Espera até tirar o dedo
-    while (fingerprintSensor.getImage() != FINGERPRINT_NOFINGER)
-        ;
-
-    // Antes de guardar precisamos de outra imagem da mesma digital
-    Serial.println(F("Encoste o mesmo dedo no sensor"));
-    displayBio.displayPrint("Encoste o mesmo dedo no sensor");
-
-    // Espera até pegar uma imagem válida da digital
-    while (fingerprintSensor.getImage() != FINGERPRINT_OK)
-        ;
-
-    // Converte a imagem para o segundo padrão
+    if (id < 1 || id > 149)
+        return false;
+    // solicita o dedo
+    //  Converte a imagem para o segundo padrão
     if (fingerprintSensor.image2Tz(2) != FINGERPRINT_OK)
-    {
-        // Se chegou aqui deu erro, então abortamos os próximos passos
-        Serial.println(F("Erro image2Tz 2"));
-        return;
-    }
+        return false;
 
     // Cria um modelo da digital a partir dos dois padrões
     if (fingerprintSensor.createModel() != FINGERPRINT_OK)
-    {
-        // Se chegou aqui deu erro, então abortamos os próximos passos
-        Serial.println(F("Erro createModel"));
-        return;
-    }
+        return false;
 
     // Guarda o modelo da digital no sensor
-    if (fingerprintSensor.storeModel(location) != FINGERPRINT_OK)
-    {
-        // Se chegou aqui deu erro, então abortamos os próximos passos
-        Serial.println(F("Erro storeModel"));
-        return;
-    }
-
-    // Se chegou aqui significa que todos os passos foram bem sucedidos
-    Serial.println(F("Sucesso!!!"));
-    displayBio.displayPrint("Digital salva com sucesso!");
+    return fingerprintSensor.storeModel(id) == FINGERPRINT_OK;
 }
 
-int Biometria::identificaUsuario(int confianca)
+int Biometria::identificaUsuario()
 {
     if (fingerprintSensor.image2Tz() != FINGERPRINT_OK)
         return -1;
     if (fingerprintSensor.fingerFastSearch() != FINGERPRINT_OK)
         return -1;
-    if (fingerprintSensor.confidence < confianca)
+    if (fingerprintSensor.confidence < limiarConfianca)
         return -1;
     return fingerprintSensor.fingerID;
-
 }
 
-bool Biometria::leitorTocado(){
+bool Biometria::leitorTocado()
+{
     return fingerprintSensor.getImage() == FINGERPRINT_OK;
 }
 
-bool Biometria::verificarDigital(void)
+
+bool Biometria::apagarDigital(int id)
 {
-    Serial.println(F("Encoste o dedo no sensor"));
-
-    // Espera até pegar uma imagem válida da digital
-    while (fingerprintSensor.getImage() != FINGERPRINT_OK)
-        ;
-
-    // Converte a imagem para o padrão que será utilizado para verificar com o banco de digitais
-    if (fingerprintSensor.image2Tz() != FINGERPRINT_OK)
-    {
-        // Se chegou aqui deu erro, então abortamos os próximos passos
-        Serial.println(F("Erro image2Tz"));
-        return false;
-    }
-
-    // Procura por este padrão no banco de digitais
-    if (fingerprintSensor.fingerFastSearch() != FINGERPRINT_OK)
-    {
-        // Se chegou aqui significa que a digital não foi encontrada
-        Serial.println(F("Digital não encontrada"));
-        return false;
-    }
-
-    // Se chegou aqui a digital foi encontrada
-    // Mostramos a posição onde a digital estava salva e a confiança
-    // Quanto mais alta a confiança melhor
-    Serial.print(F("Digital encontrada com confiança de "));
-    Serial.print(fingerprintSensor.confidence);
-    Serial.print(F(" na posição "));
-    Serial.println(fingerprintSensor.fingerID);
-    return true;
-}
-
-void Biometria::apagarDigital(int location)
-{
-
     // Verifica se a posição é válida ou não
-    if (location < 1 || location > 149)
+    if (id < 1 || id > 149)
     {
-        // Se chegou aqui a posição digitada é inválida, então abortamos os próximos passos
-        Serial.println(F("Posição inválida"));
-        return;
+        return false;
     }
-
-    // Apaga a digital nesta posição
-    if (fingerprintSensor.deleteModel(location) != FINGERPRINT_OK)
-    {
-        Serial.println(F("Erro ao apagar digital"));
-    }
-    else
-    {
-        Serial.println(F("Digital apagada com sucesso!!!"));
-    }
+    // retorna se conseguiu ou nao apagar a digital
+    return fingerprintSensor.deleteModel(id) == FINGERPRINT_OK;
 }
-void Biometria::apagarTodasDigitais(void)
+bool Biometria::apagarTodasDigitais()
 {
-    Serial.println(F("Tem certeza? (s/N)"));
-
-    // Lê o que foi digitado no monitor serial
-    String command = getCommand();
-
-    // Coloca tudo em maiúsculo para facilitar a comparação
-    command.toUpperCase();
-
-    // Verifica se foi digitado "S" ou "SIM"
-    if (command == "S" || command == "SIM")
-    {
-        Serial.println(F("Apagando banco de digitais..."));
-
-        // Apaga todas as digitais
-        if (fingerprintSensor.emptyDatabase() != FINGERPRINT_OK)
-        {
-            Serial.println(F("Erro ao apagar banco de digitais"));
-        }
-        else
-        {
-            Serial.println(F("Banco de digitais apagado com sucesso!!!"));
-        }
-    }
-    else
-    {
-        Serial.println(F("Cancelado"));
-    }
+    return fingerprintSensor.emptyDatabase() == FINGERPRINT_OK;
 }

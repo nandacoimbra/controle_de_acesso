@@ -3,11 +3,18 @@
 #include "Display.h"
 #include "Comandos.h"
 #include "Teclado.h"
+#include "MensagemUsuario.h"
+#include <TelaSerial.h>
+
+#define SDA_PIN 22
+#define SCL_PIN 23
 
 Display displayOled;
-Biometria digital(displayOled);
-Teclado teclado(displayOled);
+Biometria digital;
+Teclado teclado;
 Comandos comando(digital);
+TelaSerial telaSerial(Serial);
+MensagemUsuario msgUsuario(&displayOled, &telaSerial);
 
 // define o estado atual do sistema, de acordo com o fluxograma
 int estadoSistema = 1;
@@ -17,19 +24,22 @@ int estadoSistema = 1;
 void setup()
 {
   Serial.begin(115200);
+  Wire.begin(SDA_PIN, SCL_PIN);
   digital.setupFingerprintSensor();
   displayOled.displaySetup();
   teclado.setupKeypad();
+
 }
 
 void loop()
 {
-  char ultimaTecla = teclado.teclaPresionada();
+  char ultimaTecla = teclado.teclaPressionada();
   if (estadoSistema == 1)
   {
+    msgUsuario.desenhaTelaDigiteId();
     if (digital.leitorTocado())
     {
-      digital.verificarDigital();
+      digital.identificaUsuario();
     }
     if (Serial.available())
     {
@@ -59,7 +69,7 @@ void loop()
   if (estadoSistema == 3)
   {
     displayOled.digitarId();
-    teclado.armazenaDigitos();
+    teclado.armazenaDigito('0');
   }
   // comando.CMD = LerSerial();
   // comando.executarComandos();
@@ -74,4 +84,16 @@ void loop()
   // // int id = digital.verificarDigital();
   // if (digital.verificarDigital()==true)
   //   Serial.println("Id = " + (String)digital.verificarDigital());
+
+  // String getCommand()
+// {
+//     // Espera até que haja dados disponíveis no buffer serial
+//     while (!Serial.available())
+//     {
+//         // Espera
+//     }
+
+//     // Lê a string do buffer serial
+//     return Serial.readStringUntil('\n'); // Lê até encontrar uma nova linha
+// }
 }

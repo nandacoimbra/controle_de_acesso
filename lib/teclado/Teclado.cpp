@@ -9,14 +9,9 @@ Teclado::Teclado() : keyPad(KEYPAD_ADDRESS) // Inicializa o keyPad com o endere√
     lastKeyPressed = 'N';
 }
 
-Teclado::Teclado(Display &display) : keyPad(KEYPAD_ADDRESS)
-{
-    Teclado::displayTeclado = display;
-}
 
 void Teclado::setupKeypad(void)
 {
-    Wire.begin(SDA_PIN, SCL_PIN);
     if (keyPad.begin() == false)
     {
         Serial.println("\nERROR: cannot communicate to keypad.\nPlease reboot.\n");
@@ -25,7 +20,7 @@ void Teclado::setupKeypad(void)
     }
 }
 
-char Teclado::teclaPresionada(void)
+char Teclado::teclaPressionada(void)
 {
     uint8_t index = keyPad.getKey();
     if (index < 16 && lastKeyPressed != index)
@@ -36,16 +31,12 @@ char Teclado::teclaPresionada(void)
     return '\0';
 }
 
-void Teclado::armazenaDigitos(void)
+void Teclado::armazenaDigito(char tecla)
 {
-    char tecla = teclaPresionada();
-    if (tecla != 0 && currentIndex < 16)
-    {
-        digitosArmazenados[currentIndex++] = tecla;
-        digitosArmazenados[currentIndex] = '\0'; // Null-terminate the string
+    digitosArmazenados += tecla;
+}
 
-        // Display the stored digits
-        displayTeclado.displayPrint(digitosArmazenados);
-        Serial.print(digitosArmazenados);
-    }
+void Teclado::limpaDigitosArmazenados(void)
+{
+    digitosArmazenados.clear();
 }

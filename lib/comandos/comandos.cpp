@@ -23,6 +23,7 @@ String Comandos::lerSerial()
     comandoSerial.toUpperCase();
     return comandoSerial;
   }
+  return "";
 }
 
 void Comandos::executarComandos(String cmd)
@@ -31,11 +32,11 @@ void Comandos::executarComandos(String cmd)
   {
     int pos_igual = cmd.indexOf("=", 0);
     String id_str = cmd.substring(pos_igual + 1);
-    digital.criarDigital(id_str.toInt());
+    // digital.criarDigital(id_str.toInt());
   }
   else if (cmd.substring(0, 2) == "VD") // Verificar digital
   {
-    digital.verificarDigital();
+    digital.identificaUsuario();
   }
   else if (cmd.substring(0, 2) == "AD") // Deletar digital
   {

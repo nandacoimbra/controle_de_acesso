@@ -16,6 +16,8 @@ void Display::displaySetup()
     }
     // Limpando o buffer do display
     display.clearDisplay();
+    // display.print("ola mundo");
+    // display.display();
 }
 
 void Display::displayConfig()
@@ -34,10 +36,6 @@ void Display::telaInicial()
     display.println("Controle de Acesso");
     display.println("Pressione #");
     display.display();
-    // teste display queimado
-    Serial.println("Bem Vindo!");
-    Serial.println("Controle de Acesso");
-    Serial.println("Pressione #");
 }
 void Display::menuTeclado(void)
 {
@@ -82,6 +80,7 @@ void Display::displayPrint(String mensagem)
 }
 
 void Display::desenhaTexto(String texto){
+    displayConfig();
     display.print(texto);
     display.display();
 }

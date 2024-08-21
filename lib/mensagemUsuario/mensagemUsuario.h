@@ -12,7 +12,13 @@ private:
 
 public:
     // métodos
-    MensagemUsuario(TelaSaida *tela1, TelaSaida *tela2);
+    MensagemUsuario(TelaSaida &tela1, TelaSaida &tela2);
 
+    void telaBemVindo();
+    void telaMenuInicial();
     void desenhaTelaDigiteId(String digitos = "");
+    void desenhaTelaDigiteSenha(String digitos = "");
+    void desenhaTelaAutenticacao();
+    void telaUsuarioNaoCadastrado();
+    void telaUsuarioEncontrado(String nome);
 };

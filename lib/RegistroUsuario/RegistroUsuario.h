@@ -1,0 +1,38 @@
+#pragma once
+
+#include <Arduino.h>
+// sd card
+#include "FS.h"
+
+enum TipoUsuario
+{
+    COMUM,
+    MASTER
+};
+enum TipoAutenticacao
+{
+    TECLADO,
+    RECONHECIMENTO_FACIAL,
+    BIOMETRIA
+};
+
+class Usuario
+{
+public:
+    int id=-1;
+    String nome;
+    TipoUsuario tipo;
+    String senha;
+};
+
+class RegistroUsuario
+{
+private:
+
+public:
+    //  métodos
+    Usuario transformaTextoEmUsuario(String s);
+    // nome:XXXXXXXXX,tipo:X,id:XXXXXXXX,senha:XXXXXXXXXXX;
+    Usuario recuperaUsuario(Stream& stream, int id, String senha, TipoAutenticacao autenticacao);
+    String buscaIdNoArquivo(Stream& stream, int id);
+};

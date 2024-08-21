@@ -14,7 +14,7 @@ void Biometria::setupFingerprintSensor()
     if (!fingerprintSensor.verifyPassword())
     {
         // Se chegou aqui significa que a senha está errada ou o sensor está problemas de conexão
-        Serial.println(F("Não foi possível conectar ao sensor. Verifique a senha ou a conexão"));
+        Serial.println(F("Não foi possível conectar ao sensor de Biometria. Verifique a senha ou a conexão"));
         while (true)
             ;
     }

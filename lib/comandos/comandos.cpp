@@ -3,7 +3,7 @@
 Comandos::Comandos(Biometria biometria) : digital(biometria) 
 {
   comando = "";
-  digital = biometria;
+  // digital = biometria;
 
 }
 

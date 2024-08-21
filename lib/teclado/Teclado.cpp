@@ -9,7 +9,6 @@ Teclado::Teclado() : keyPad(KEYPAD_ADDRESS) // Inicializa o keyPad com o endere√
     lastKeyPressed = 'N';
 }
 
-
 void Teclado::setupKeypad(void)
 {
     if (keyPad.begin() == false)
@@ -28,6 +27,7 @@ char Teclado::teclaPressionada(void)
         lastKeyPressed = index;
         return keys[index];
     }
+    lastKeyPressed = index;
     return '\0';
 }
 

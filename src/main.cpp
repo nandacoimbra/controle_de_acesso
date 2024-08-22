@@ -96,6 +96,7 @@ void loop()
     }
     msgUsuario.desenhaTelaDigiteId(teclado.digitosArmazenados);
 
+
     // Transições
     if (teclaAtual == '#')
     {
@@ -105,6 +106,8 @@ void loop()
       teclaAtual = '\0';
       teclado.limpaDigitosArmazenados();
     }
+
+
   }
 
   if (estadoSistema == 3)

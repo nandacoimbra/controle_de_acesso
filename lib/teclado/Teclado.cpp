@@ -31,9 +31,27 @@ char Teclado::teclaPressionada(void)
     return '\0';
 }
 
+// void Teclado::armazenaDigito(char tecla)
+// {
+//     digitosArmazenados += tecla;
+// }
+
 void Teclado::armazenaDigito(char tecla)
 {
-    digitosArmazenados += tecla;
+    if (tecla == 'B')
+    {
+        // Verifica se há dígitos armazenados para remover
+        if (digitosArmazenados.length() > 0)
+        {
+            // Remove o último caractere da string
+            digitosArmazenados.remove(digitosArmazenados.length() - 1);
+        }
+    }
+    else
+    {
+        // Adiciona o novo dígito à string
+        digitosArmazenados += tecla;
+    }
 }
 
 void Teclado::limpaDigitosArmazenados(void)

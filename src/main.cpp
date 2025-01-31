@@ -14,6 +14,27 @@
 #define SDA_PIN 22
 #define SCL_PIN 23
 
+enum Estado
+{
+  INICIO,
+  INSERCAO_ID_USUARIO,
+  INSERCAO_SENHA_USUARIO,
+  AUTENTICACAO,
+  PORTA_ABERTA,
+  USUARIO_NAO_CADASTRADO,
+  MENU_USUARIO_MASTER,
+  REMOVENDO_USUARIO,
+  CADASTRANDO_USUARIO,
+  CADASTRO_CONFIRMANDO_SENHA_USUARIO,
+  CADASTRO_SENHA_INCORRETA,
+  CADASTRO_BIOMETRIA_ENCOSTE_DEDO,
+  CADASTRO_BIOMETRIA_RETIRE_DEDO,
+  SALVA_USUARIO_SD_CARD,
+  CADASTRO_BIOMETRIA_ENCOSTE_DEDO_NOVAMENTE,
+  USUARIO_CADASTRADO_COM_SUCESSO,
+
+};
+
 Display displayOled;
 Biometria digital;
 Teclado teclado;
@@ -23,11 +44,14 @@ MensagemUsuario msgUsuario(displayOled, telaSerial);
 RegistroUsuario registroUsuario;
 
 // define o estado atual do sistema, de acordo com o fluxograma
-int estadoSistema = 1;
+int estadoSistema = INICIO;
 
 char ultimaTecla = '\0'; // Variável para armazenar a última tecla pressionada
 String id;
 String senha;
+String confirmaSenha;
+
+long timer = 0;
 
 void setup()
 {
@@ -61,7 +85,7 @@ void loop()
 
   char teclaAtual = teclado.teclaPressionada();
 
-  if (estadoSistema == 1)
+  if (estadoSistema == INICIO)
   {
     // Executa toda hora
     msgUsuario.telaBemVindo();
@@ -80,13 +104,13 @@ void loop()
     }
     else if (teclaAtual != '\0')
     {
-      estadoSistema = 2;
+      estadoSistema = INSERCAO_ID_USUARIO;
       teclaAtual = '\0';
     }
     //----------------------------
   }
 
-  else if (estadoSistema == 2)
+  else if (estadoSistema == INSERCAO_ID_USUARIO)
   {
 
     // Executa toda hora
@@ -96,21 +120,18 @@ void loop()
     }
     msgUsuario.desenhaTelaDigiteId(teclado.digitosArmazenados);
 
-
     // Transições
     if (teclaAtual == '#')
     {
       id = teclado.digitosArmazenados;
 
-      estadoSistema = 3;
+      estadoSistema = INSERCAO_SENHA_USUARIO;
       teclaAtual = '\0';
       teclado.limpaDigitosArmazenados();
     }
-
-
   }
 
-  if (estadoSistema == 3)
+  if (estadoSistema == INSERCAO_SENHA_USUARIO)
   {
 
     // Executa toda hora
@@ -124,13 +145,13 @@ void loop()
     if (teclaAtual == '#')
     {
       senha = teclado.digitosArmazenados;
-      estadoSistema = 4;
+      estadoSistema = AUTENTICACAO;
       teclaAtual = '\0';
       teclado.limpaDigitosArmazenados();
     }
   }
 
-  if (estadoSistema == 4)
+  if (estadoSistema == AUTENTICACAO)
   {
     File file = SD.open("/registros.txt", "r");
     Usuario user = registroUsuario.recuperaUsuario(file, id.toInt(), senha, TECLADO);
@@ -138,12 +159,126 @@ void loop()
     if (user.id == -1)
     {
       msgUsuario.telaUsuarioNaoCadastrado();
+      // executar alguma ação, tipo voltar para o início ou digitar a senha novamente
+    }
+    else if (user.tipo == MASTER)
+    {
+      estadoSistema = MENU_USUARIO_MASTER;
+
+      // funcao buscaIdNoArquivo
+      //  tranformaStringEmUsuario
     }
     else
+    {
       msgUsuario.telaUsuarioEncontrado(user.nome);
-    // funcao buscaIdNoArquivo
-    //  tranformaStringEmUsuario
+    }
   }
+
+  if (estadoSistema == MENU_USUARIO_MASTER)
+  {
+    msgUsuario.telaMenuMaster();
+
+    if (teclaAtual == '1')
+    {
+    }
+    else if (teclaAtual == '2')
+    {
+      teclaAtual = '\0';
+      estadoSistema = CADASTRANDO_USUARIO;
+    }
+    else if (teclaAtual == '3')
+    {
+    }
+  }
+
+  if (estadoSistema == CADASTRANDO_USUARIO)
+  {
+    // Executa toda hora
+    if (teclaAtual != '\0' && teclaAtual != '#')
+    {
+      teclado.armazenaDigito(teclaAtual);
+    }
+
+    msgUsuario.telaCadastroDigiteSenha(teclado.digitosArmazenados);
+
+    // Transições
+    if (teclaAtual == '#')
+    {
+      senha = teclado.digitosArmazenados;
+      teclaAtual = '\0';
+      teclado.limpaDigitosArmazenados();
+      estadoSistema = CADASTRO_CONFIRMANDO_SENHA_USUARIO;
+    }
+  }
+  if (estadoSistema == CADASTRO_CONFIRMANDO_SENHA_USUARIO)
+  {
+    // Executa toda hora
+    if (teclaAtual != '\0' && teclaAtual != '#')
+    {
+      teclado.armazenaDigito(teclaAtual);
+    }
+
+    msgUsuario.telaCadastroDigiteNovamenteSenha(teclado.digitosArmazenados);
+
+    // Transições
+    if (teclaAtual == '#')
+    {
+      confirmaSenha = teclado.digitosArmazenados;
+      teclaAtual = '\0';
+      teclado.limpaDigitosArmazenados();
+      if (senha == confirmaSenha)
+      {
+        estadoSistema = CADASTRO_BIOMETRIA_ENCOSTE_DEDO;
+      }
+      else
+      {
+        // senha incorreta
+      }
+    }
+  }
+
+  if (estadoSistema == CADASTRO_BIOMETRIA_ENCOSTE_DEDO)
+  {
+    msgUsuario.telaCadastroBiometriaEncosteDedo();
+    if (digital.leitorTocado())
+    {
+      bool aux = digital.iniciaCriacaoDigital();
+      Serial.println(aux);
+      if (aux)
+      {
+        estadoSistema = CADASTRO_BIOMETRIA_RETIRE_DEDO;
+        timer = millis();
+      }
+    }
+  }
+
+  if (estadoSistema == CADASTRO_BIOMETRIA_RETIRE_DEDO)
+  {
+    msgUsuario.telaCadastroBiometriaRetireDedo();
+    if (!digital.leitorTocado() && (millis() - timer > 5000))
+    {
+      estadoSistema = CADASTRO_BIOMETRIA_ENCOSTE_DEDO_NOVAMENTE;
+    }
+  }
+
+  if (estadoSistema == CADASTRO_BIOMETRIA_ENCOSTE_DEDO_NOVAMENTE)
+  {
+    msgUsuario.telaCadastroBiometriaEncosteDedoNovamente();
+    if (digital.leitorTocado())
+    {
+      if (digital.finalizaCriacaoDigital(102))
+      {
+        estadoSistema = USUARIO_CADASTRADO_COM_SUCESSO;
+      }
+    }
+  }
+  if (estadoSistema == USUARIO_CADASTRADO_COM_SUCESSO)
+  {
+    msgUsuario.telaBiometriaCadastradaSucesso();
+    if (teclado.teclaPressionada() == '#')
+      estadoSistema = MENU_USUARIO_MASTER;
+  }
+
   // if(estadoSistema==2){
   //   display.digitarId();
   // }

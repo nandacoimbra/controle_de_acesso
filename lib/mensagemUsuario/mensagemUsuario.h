@@ -21,4 +21,13 @@ public:
     void desenhaTelaAutenticacao();
     void telaUsuarioNaoCadastrado();
     void telaUsuarioEncontrado(String nome);
+    void telaMenuMaster();
+    void telaCadastroDigiteSenha(String digitos = "");
+    void telaCadastroDigiteNovamenteSenha(String digitos = "");
+    void telaUsuarioCadastrado();
+    void telaCadastroBiometriaEncosteDedo();
+    void telaBiometriaJaCadastrada(int id);
+    void telaBiometriaCadastradaSucesso();
+    void telaCadastroBiometriaRetireDedo();
+    void telaCadastroBiometriaEncosteDedoNovamente();
 };

@@ -56,7 +56,91 @@ void MensagemUsuario::telaUsuarioNaoCadastrado()
 
 void MensagemUsuario::telaUsuarioEncontrado(String nome)
 {
-    String tela = "Bem vindo, "+nome+"!";
+    String tela = "Bem vindo, " + nome + "!";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaMenuMaster()
+{
+    String tela = "Bem vindo\n";
+    tela += "1 - Abrir porta\n";
+    tela += "2 - Cadastrar usuario\n";
+    tela += "3 - Remover usuario";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaCadastroDigiteSenha(String digitos)
+{
+    for (int i = 0; i < digitos.length(); i++)
+    {
+        digitos[i] = '*';
+    }
+
+    String tela = "Informe uma senha numerica\n";
+    tela += "Senha:" + digitos + "\n";
+    tela += "Pressione # \n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaCadastroDigiteNovamenteSenha(String digitos)
+{
+    for (int i = 0; i < digitos.length(); i++)
+    {
+        digitos[i] = '*';
+    }
+
+    String tela = "Digite novamente a senha\n";
+    tela += "Senha:" + digitos + "\n";
+    tela += "Pressione # \n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaUsuarioCadastrado()
+{
+    String tela = "Usuario cadastrado com sucesso\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaCadastroBiometriaEncosteDedo()
+{
+    String tela = "=Cadastro biometria=\n";
+    tela += "Encoste o dedo no sensor\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaCadastroBiometriaEncosteDedoNovamente()
+{
+    String tela = "=Cadastro biometria=\n";
+    tela += "Encoste o MESMO dedo novamente\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaBiometriaJaCadastrada(int id)
+{
+    String tela = "Biometria ja cadastrada no id: " + id;
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaBiometriaCadastradaSucesso()
+{
+    String tela = "Biometria cadastrada com sucesso\n";
+    tela += "\nPressione #\n";
+
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaCadastroBiometriaRetireDedo()
+{
+    String tela = "Retire o dedo do sensor\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }

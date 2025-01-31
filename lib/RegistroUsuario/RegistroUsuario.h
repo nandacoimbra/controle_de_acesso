@@ -35,4 +35,5 @@ public:
     // nome:XXXXXXXXX,tipo:X,id:XXXXXXXX,senha:XXXXXXXXXXX;
     Usuario recuperaUsuario(Stream& stream, int id, String senha, TipoAutenticacao autenticacao);
     String buscaIdNoArquivo(Stream& stream, int id);
+    String cadastraUsuario(Stream& stream, int id, int senha);
 };

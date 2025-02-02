@@ -61,6 +61,13 @@ void MensagemUsuario::telaUsuarioEncontrado(String nome)
     telaSecundaria.desenhaTexto(tela);
 }
 
+void MensagemUsuario::telaMsgUsuarioEncontrado()
+{
+    String tela = "Usuario encontrado";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
 void MensagemUsuario::telaMenuMaster()
 {
     String tela = "Bem vindo\n";

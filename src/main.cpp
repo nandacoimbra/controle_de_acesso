@@ -16,6 +16,7 @@
 
 enum Estado
 {
+  INVALIDO,
   INICIO,
   INSERCAO_ID_USUARIO,
   INSERCAO_SENHA_USUARIO,
@@ -32,7 +33,7 @@ enum Estado
   CADASTRO_BIOMETRIA_RETIRE_DEDO,
   SALVA_USUARIO_SD_CARD,
   CADASTRO_BIOMETRIA_ENCOSTE_DEDO_NOVAMENTE,
-  USUARIO_CADASTRADO_COM_SUCESSO,
+  BIOMETRIA_CADASTRADA_COM_SUCESSO,
 
 };
 
@@ -46,10 +47,12 @@ RegistroUsuario registroUsuario;
 
 // define o estado atual do sistema, de acordo com o fluxograma
 int estadoAtualSistema = INICIO;
-int estadoAnteriorSistema = INICIO;
+int estadoAnteriorSistema = INVALIDO;
 
 char ultimaTecla = '\0'; // Variável para armazenar a última tecla pressionada
-String id;
+String id;               // id usado na autenticacao
+int idGerado;
+int idBiometria; // id gerado para um novo usuario
 String senha;
 String confirmaSenha;
 
@@ -89,9 +92,13 @@ void loop()
 
   if (estadoAtualSistema == INICIO)
   {
-    estadoAnteriorSistema = estadoAtualSistema;
+    if (estadoAnteriorSistema != estadoAtualSistema)
+    {
+      //
+      msgUsuario.telaBemVindo();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
     // Executa toda hora
-    msgUsuario.telaBemVindo();
 
     // Transiçoes
     if (digital.leitorTocado())
@@ -122,7 +129,7 @@ void loop()
 
   else if (estadoAtualSistema == INSERCAO_ID_USUARIO)
   {
-
+    estadoAnteriorSistema = estadoAtualSistema;
     // Executa toda hora
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
@@ -143,7 +150,7 @@ void loop()
 
   else if (estadoAtualSistema == INSERCAO_SENHA_USUARIO)
   {
-
+    estadoAnteriorSistema = estadoAtualSistema;
     // Executa toda hora
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
@@ -163,6 +170,7 @@ void loop()
 
   else if (estadoAtualSistema == AUTENTICACAO)
   {
+    estadoAnteriorSistema = estadoAtualSistema;
     File file = SD.open("/registros.txt", "r");
     Usuario user = registroUsuario.recuperaUsuario(file, id.toInt(), senha, TECLADO);
     file.close();
@@ -186,6 +194,7 @@ void loop()
 
   else if (estadoAtualSistema == MENU_USUARIO_MASTER)
   {
+    estadoAnteriorSistema = estadoAtualSistema;
     msgUsuario.telaMenuMaster();
 
     if (teclaAtual == '1')
@@ -198,25 +207,42 @@ void loop()
     }
     else if (teclaAtual == '3')
     {
+      
+    }
+    else if (teclaAtual == '4')
+    {
+      teclaAtual = '\0';
+      estadoAtualSistema = INICIO;
     }
   }
 
   else if (estadoAtualSistema == CADASTRANDO_USUARIO)
   {
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      File file = SD.open("/registros.txt", "r");
+      idGerado = registroUsuario.buscaProximoIdDisponivel(file);
+      file.close();
+      // atualiza o estado
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
+
     // Executa toda hora
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
       teclado.armazenaDigito(teclaAtual);
     }
 
-    msgUsuario.telaCadastroDigiteSenha(teclado.digitosArmazenados);
+    msgUsuario.telaCadastroDigiteSenha(teclado.digitosArmazenados, idGerado);
 
     // Transições
     if (teclaAtual == '#')
     {
+      // armazena senha digitada
       senha = teclado.digitosArmazenados;
       teclaAtual = '\0';
       teclado.limpaDigitosArmazenados();
+      // muda para o estado de confirmacao de senha
       estadoAtualSistema = CADASTRO_CONFIRMANDO_SENHA_USUARIO;
     }
   }
@@ -234,37 +260,60 @@ void loop()
     // Transições
     if (teclaAtual == '#')
     {
+      // armazena senha digitada pela 2 vez
       confirmaSenha = teclado.digitosArmazenados;
       teclaAtual = '\0';
       teclado.limpaDigitosArmazenados();
+      // compara as senhas digitadas
       if (senha == confirmaSenha)
       {
+        // se as senhas estiveram iguais, segue p/ o cadastro da biometria
         estadoAtualSistema = CADASTRO_BIOMETRIA_ENCOSTE_DEDO;
       }
       else
       {
-        // senha incorreta
+        // se as senhas estiveram diferentes, retorna ao inicio do cadastro
+        estadoAtualSistema = CADASTRO_SENHA_INCORRETA;
       }
     }
   }
-
+  else if (estadoAtualSistema == CADASTRO_SENHA_INCORRETA)
+  {
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      timer = millis();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
+    // exibe mensagem de senha incorreta e retorno ao cadastro
+    msgUsuario.telaSenhaIncorreta();
+    // aguarda 3s para retornar
+    if (millis() - timer > 3000)
+    {
+      // retorna ao inicio do cadastro
+      estadoAtualSistema = CADASTRANDO_USUARIO;
+    }
+  }
   else if (estadoAtualSistema == CADASTRO_BIOMETRIA_ENCOSTE_DEDO)
   {
+    estadoAnteriorSistema = estadoAtualSistema;
     msgUsuario.telaCadastroBiometriaEncosteDedo();
     if (digital.leitorTocado())
     {
-      bool aux = digital.iniciaCriacaoDigital();
-      Serial.println(aux);
-      if (aux)
+      bool primeiraImagemOk = digital.iniciaCriacaoDigital();
+      if (primeiraImagemOk)
       {
         estadoAtualSistema = CADASTRO_BIOMETRIA_RETIRE_DEDO;
-        timer = millis();
       }
     }
   }
 
   else if (estadoAtualSistema == CADASTRO_BIOMETRIA_RETIRE_DEDO)
   {
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      timer = millis();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
     msgUsuario.telaCadastroBiometriaRetireDedo();
     if (!digital.leitorTocado() && (millis() - timer > 5000))
     {
@@ -274,18 +323,28 @@ void loop()
 
   else if (estadoAtualSistema == CADASTRO_BIOMETRIA_ENCOSTE_DEDO_NOVAMENTE)
   {
-    msgUsuario.telaCadastroBiometriaEncosteDedoNovamente();
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      estadoAnteriorSistema = estadoAtualSistema;
+      msgUsuario.telaCadastroBiometriaEncosteDedoNovamente();
+    }
     if (digital.leitorTocado())
     {
-      if (digital.finalizaCriacaoDigital(111))
+      File file = SD.open("/registros.txt", "r");
+      idBiometria = registroUsuario.buscaIdBiometriaDisponivel(file);
+      file.close();
+      if (digital.finalizaCriacaoDigital(idBiometria))
       {
-        estadoAtualSistema = USUARIO_CADASTRADO_COM_SUCESSO;
+        Serial.println("Biometria cadastrada com sucesso na posicao: " + idBiometria);
+        estadoAtualSistema = BIOMETRIA_CADASTRADA_COM_SUCESSO;
       }
     }
   }
 
-  else if (estadoAtualSistema == USUARIO_CADASTRADO_COM_SUCESSO)
+  else if (estadoAtualSistema == BIOMETRIA_CADASTRADA_COM_SUCESSO)
   {
+    
+    estadoAnteriorSistema = estadoAtualSistema;
     msgUsuario.telaBiometriaCadastradaSucesso();
     if (teclado.teclaPressionada() == '#')
       estadoAtualSistema = MENU_USUARIO_MASTER;

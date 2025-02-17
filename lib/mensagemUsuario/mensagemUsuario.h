@@ -6,9 +6,9 @@
 class MensagemUsuario
 {
 private:
-    //exemplo Display, Serial, etc
-    TelaSaida& telaPrincipal;
-    TelaSaida& telaSecundaria;
+    // exemplo Display, Serial, etc
+    TelaSaida &telaPrincipal;
+    TelaSaida &telaSecundaria;
 
 public:
     // métodos
@@ -21,11 +21,12 @@ public:
     void desenhaTelaAutenticacao();
     void telaUsuarioNaoCadastrado();
     void telaUsuarioEncontrado(String nome);
-    //teste
+    // teste
     void telaMsgUsuarioEncontrado();
     void telaMenuMaster();
-    void telaCadastroDigiteSenha(String digitos = "");
+    void telaCadastroDigiteSenha(String digitos = "", int id = 0);
     void telaCadastroDigiteNovamenteSenha(String digitos = "");
+    void telaSenhaIncorreta();
     void telaUsuarioCadastrado();
     void telaCadastroBiometriaEncosteDedo();
     void telaBiometriaJaCadastrada(int id);

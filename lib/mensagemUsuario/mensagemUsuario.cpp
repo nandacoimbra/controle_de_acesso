@@ -73,19 +73,21 @@ void MensagemUsuario::telaMenuMaster()
     String tela = "Bem vindo\n";
     tela += "1 - Abrir porta\n";
     tela += "2 - Cadastrar usuario\n";
-    tela += "3 - Remover usuario";
+    tela += "3 - Remover usuario\n";
+    tela += "4 - Menu inicial";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }
 
-void MensagemUsuario::telaCadastroDigiteSenha(String digitos)
+void MensagemUsuario::telaCadastroDigiteSenha(String digitos, int id)
 {
     for (int i = 0; i < digitos.length(); i++)
     {
         digitos[i] = '*';
     }
 
-    String tela = "Informe uma senha numerica\n";
+    String tela = "ID gerado: " + String(id) + "\n";
+    tela += "Informe uma senha numerica\n";
     tela += "Senha:" + digitos + "\n";
     tela += "Pressione # \n";
     telaPrincipal.desenhaTexto(tela);
@@ -102,6 +104,14 @@ void MensagemUsuario::telaCadastroDigiteNovamenteSenha(String digitos)
     String tela = "Digite novamente a senha\n";
     tela += "Senha:" + digitos + "\n";
     tela += "Pressione # \n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaSenhaIncorreta()
+{
+    String tela = "Senha incorreta!\n";
+    tela += "Retornando a tela de cadastro ...\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }

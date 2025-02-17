@@ -19,7 +19,8 @@ enum TipoAutenticacao
 class Usuario
 {
 public:
-    int id=-1;
+    int id = -1;
+    int idBiometria = -1;
     String nome;
     TipoUsuario tipo;
     String senha;
@@ -28,12 +29,13 @@ public:
 class RegistroUsuario
 {
 private:
-
 public:
     //  métodos
     Usuario transformaTextoEmUsuario(String s);
     // nome:XXXXXXXXX,tipo:X,id:XXXXXXXX,senha:XXXXXXXXXXX;
-    Usuario recuperaUsuario(Stream& stream, int id, String senha, TipoAutenticacao autenticacao);
-    String buscaIdNoArquivo(Stream& stream, int id);
-    String cadastraUsuario(Stream& stream, int id, int senha);
+    Usuario recuperaUsuario(Stream &stream, int id, String senha, TipoAutenticacao autenticacao);
+    String buscaIdNoArquivo(Stream &stream, int id);
+    String cadastraUsuario(Stream &stream, int id, int senha);
+    int buscaProximoIdDisponivel(Stream &stream);
+    int buscaIdBiometriaDisponivel(Stream &stream);
 };

@@ -4,7 +4,7 @@
 Usuario RegistroUsuario::transformaTextoEmUsuario(String s)
 {
     Usuario usuario;
-    
+
     // Extrai o nome do usuário
     int startNome = s.indexOf("nome:") + 5;
     int endNome = s.indexOf(",", startNome);
@@ -20,6 +20,11 @@ Usuario RegistroUsuario::transformaTextoEmUsuario(String s)
     int endId = s.indexOf(",", startId);
     usuario.id = s.substring(startId, endId).toInt();
 
+    // Extrai o ID do usuário na biometria
+    int startIdBiometria = s.indexOf("idBiometria:") + 12;
+    int endIdBiometria = s.indexOf(",", startIdBiometria);
+    usuario.idBiometria = s.substring(startIdBiometria, endIdBiometria).toInt();
+
     // Extrai a senha do usuário
     int startSenha = s.indexOf("senha:") + 6;
     int endSenha = s.indexOf(";", startSenha);
@@ -32,12 +37,14 @@ Usuario RegistroUsuario::transformaTextoEmUsuario(String s)
 // Função para recuperar um usuário do fluxo de dados com base no ID e senha fornecidos
 Usuario RegistroUsuario::recuperaUsuario(Stream &stream, int id, String senha, TipoAutenticacao autenticacao)
 {
-    
+
     // Busca o usuário com o ID fornecido no fluxo de dados
     String stringEncontrada = buscaIdNoArquivo(stream, id);
     Usuario usuario = transformaTextoEmUsuario(stringEncontrada);
-    if(autenticacao == TECLADO){
-        if(usuario.senha == senha){
+    if (autenticacao == TECLADO)
+    {
+        if (usuario.senha == senha)
+        {
             return usuario;
         }
     }
@@ -71,7 +78,7 @@ String RegistroUsuario::buscaIdNoArquivo(Stream &stream, int id)
         }
     }
 
-    //verifica se terminou de ler o arquivo e se o id foi encontrado
+    // verifica se terminou de ler o arquivo e se o id foi encontrado
     if (stringId.length() == contaAcertos)
     {
         stringId += stream.readStringUntil(';');
@@ -86,4 +93,49 @@ String RegistroUsuario::cadastraUsuario(Stream &stream, int id, int senha)
     return String();
 }
 
+int RegistroUsuario::buscaProximoIdDisponivel(Stream &stream)
+{
+    int maiorId = 0;
 
+    while (stream.available())
+    {
+        // lê uma linha completa
+        String linha = stream.readStringUntil(';');
+        // Extrai o ID do usuário
+        int startId = linha.indexOf("id:") + 3;
+        int endId = linha.indexOf(",", startId);
+        int id = linha.substring(startId, endId).toInt();
+
+        if (id > maiorId)
+        {
+            maiorId = id;
+        }
+    }
+    return maiorId + 1;
+}
+
+int RegistroUsuario::buscaIdBiometriaDisponivel(Stream &stream)
+{
+    bool posicoesDisponiveis[162];
+
+    while (stream.available())
+    {
+        String linha = stream.readStringUntil(';');
+        // Extrai o ID do usuário na biometria
+        int startIdBiometria = linha.indexOf("idBiometria:") + 12;
+        int endIdBiometria = linha.indexOf(",", startIdBiometria);
+        int idBiometria = linha.substring(startIdBiometria, endIdBiometria).toInt();
+        // marca a posicao como indisponivel
+        posicoesDisponiveis[idBiometria] = false;
+    }
+
+    for (int i = 1; i < 162; i++)
+    {
+        if (posicoesDisponiveis[i])
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}

@@ -119,6 +119,7 @@ void MensagemUsuario::telaSenhaIncorreta()
 void MensagemUsuario::telaUsuarioCadastrado()
 {
     String tela = "Usuario cadastrado com sucesso\n";
+    tela+= "Aperte # para retornar ao Menu Inicial\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }
@@ -139,6 +140,16 @@ void MensagemUsuario::telaCadastroBiometriaEncosteDedoNovamente()
     telaSecundaria.desenhaTexto(tela);
 }
 
+void MensagemUsuario::telaCadastroInformeTipoUsuario()
+{
+    String tela = "Informe o tipo de usuario: \n";
+    tela += "0 - Comum\n";
+    tela += "1 - Master (Admin)\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+
 void MensagemUsuario::telaBiometriaJaCadastrada(int id)
 {
     String tela = "Biometria ja cadastrada no id: " + id;
@@ -148,9 +159,7 @@ void MensagemUsuario::telaBiometriaJaCadastrada(int id)
 
 void MensagemUsuario::telaBiometriaCadastradaSucesso()
 {
-    String tela = "Biometria cadastrada com sucesso\n";
-    tela += "\nPressione #\n";
-
+    String tela = "Biometria cadastrada com sucesso ...\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }

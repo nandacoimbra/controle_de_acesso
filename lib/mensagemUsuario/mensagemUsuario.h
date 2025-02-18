@@ -33,4 +33,6 @@ public:
     void telaBiometriaCadastradaSucesso();
     void telaCadastroBiometriaRetireDedo();
     void telaCadastroBiometriaEncosteDedoNovamente();
+    void telaCadastroInformeTipoUsuario(); 
+ 
 };

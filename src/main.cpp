@@ -31,6 +31,7 @@ enum Estado
   CADASTRO_SENHA_INCORRETA,
   CADASTRO_BIOMETRIA_ENCOSTE_DEDO,
   CADASTRO_BIOMETRIA_RETIRE_DEDO,
+  CADASTRO_INFORMA_TIPO_USUARIO,
   SALVA_USUARIO_SD_CARD,
   CADASTRO_BIOMETRIA_ENCOSTE_DEDO_NOVAMENTE,
   BIOMETRIA_CADASTRADA_COM_SUCESSO,
@@ -55,6 +56,7 @@ int idGerado;
 int idBiometria; // id gerado para um novo usuario
 String senha;
 String confirmaSenha;
+TipoUsuario tipoUsuario;
 
 long timer = 0;
 
@@ -207,7 +209,6 @@ void loop()
     }
     else if (teclaAtual == '3')
     {
-      
     }
     else if (teclaAtual == '4')
     {
@@ -246,9 +247,11 @@ void loop()
       estadoAtualSistema = CADASTRO_CONFIRMANDO_SENHA_USUARIO;
     }
   }
-
   else if (estadoAtualSistema == CADASTRO_CONFIRMANDO_SENHA_USUARIO)
+
   {
+    estadoAnteriorSistema = estadoAtualSistema;
+
     // Executa toda hora
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
@@ -343,13 +346,50 @@ void loop()
 
   else if (estadoAtualSistema == BIOMETRIA_CADASTRADA_COM_SUCESSO)
   {
-    
-    estadoAnteriorSistema = estadoAtualSistema;
+    if (estadoAnteriorSistema != estadoAtualSistema)
+    {
+      timer = millis();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
     msgUsuario.telaBiometriaCadastradaSucesso();
-    if (teclado.teclaPressionada() == '#')
-      estadoAtualSistema = MENU_USUARIO_MASTER;
-  }
 
+    if (millis() - timer > 3000)
+    {
+      estadoAtualSistema = CADASTRO_INFORMA_TIPO_USUARIO;
+    }
+  }
+  else if (estadoAtualSistema == CADASTRO_INFORMA_TIPO_USUARIO)
+  {
+    estadoAnteriorSistema = estadoAtualSistema;
+    msgUsuario.telaCadastroInformeTipoUsuario();
+    if (teclaAtual == '0')
+    {
+      tipoUsuario = COMUM;
+      estadoAtualSistema = SALVA_USUARIO_SD_CARD;
+    }
+    else if (teclaAtual == '1')
+    {
+      tipoUsuario = MASTER;
+      estadoAtualSistema = SALVA_USUARIO_SD_CARD;
+    }
+  }
+  else if (estadoAtualSistema == SALVA_USUARIO_SD_CARD)
+  {
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+    //abre o arquivo no modo de escrita "append", que escreve no final do arquivo e mantem o conteudo
+      File file = SD.open("/registros.txt", "a");
+      //chama a funcao que salva no SD card
+      registroUsuario.salvaUsuarioSdCard(file, idGerado, idBiometria, tipoUsuario, senha);
+      file.close();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
+    msgUsuario.telaUsuarioCadastrado();
+    if (teclaAtual == '#')
+    {
+      estadoAtualSistema = INICIO;
+    }
+  }
   else if (estadoAtualSistema == USUARIO_NAO_CADASTRADO)
   {
     // Executa só na entrada

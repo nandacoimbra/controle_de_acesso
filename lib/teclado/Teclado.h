@@ -17,6 +17,10 @@ public:
     const uint8_t KEYPAD_ADDRESS = 0x20;
     I2CKeyPad keyPad;
     byte lastKeyPressed;
+    String TECLAS_ALFABETO[10] = {
+        "0", "ABC", "DEF", "GHI", "JKL",
+        "MNO", "PQRS", "TUV", "WXYZ", " .?"
+      };
     Teclado();
     void setupKeypad(void);
     char teclaPressionada(void);

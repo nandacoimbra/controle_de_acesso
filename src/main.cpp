@@ -21,15 +21,18 @@ enum Estado
   INSERCAO_ID_USUARIO,
   INSERCAO_SENHA_USUARIO,
   AUTENTICACAO,
+  ABRINDO_PORTA,
   PORTA_ABERTA,
   USUARIO_NAO_CADASTRADO,
   USUARIO_ENCONTRADO,
   MENU_USUARIO_MASTER,
   REMOVENDO_USUARIO,
-  CADASTRANDO_USUARIO,
+  CADASTRO_DIGITANDO_SENHA,
+  CADASTRO_DIGITANDO_NOME,
   CADASTRO_CONFIRMANDO_SENHA_USUARIO,
   CADASTRO_SENHA_INCORRETA,
   CADASTRO_BIOMETRIA_ENCOSTE_DEDO,
+  CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO,
   CADASTRO_BIOMETRIA_RETIRE_DEDO,
   CADASTRO_INFORMA_TIPO_USUARIO,
   SALVA_USUARIO_SD_CARD,
@@ -50,15 +53,34 @@ RegistroUsuario registroUsuario;
 int estadoAtualSistema = INICIO;
 int estadoAnteriorSistema = INVALIDO;
 
-char ultimaTecla = '\0'; // Variável para armazenar a última tecla pressionada
-String id;               // id usado na autenticacao
-int idGerado;
-int idBiometria; // id gerado para um novo usuario
+char ultimaTecla = '\0';        // Variável para armazenar a última tecla pressionada
+char ultimaTeclaNaoNula = '\0'; // Variável para armazenar a última tecla pressionada que não é nula
+char letraAtual = '\0';         // Variável para armazenar a letra atual para digitacao do nome
+String nomeUsuario;             // nome do usuario
+int contadorLetras = 0;         // contador de letras digitadas
+String id;                      // id usado na autenticacao
+int idGerado;                   // id gerado para um novo usuario
+int idBiometria;                // idBiometria gerado para um novo usuario
 String senha;
 String confirmaSenha;
 TipoUsuario tipoUsuario;
 
 long timer = 0;
+
+void resetaValoresGlobais()
+{
+  ultimaTecla = '\0';        // Variável para armazenar a última tecla pressionada
+  ultimaTeclaNaoNula = '\0'; // Variável para armazenar a última tecla pressionada que não é nula
+  letraAtual = '\0';         // Variável para armazenar a letra atual para digitacao do nome
+  nomeUsuario = "";          // nome do usuario
+  contadorLetras = 0;        // contador de letras digitadas
+  id = "";                   // id usado na autenticacao
+  idGerado = 0;              // id gerado para um novo usuario
+  idBiometria = 0;           // idBiometria gerado para um novo usuario
+  senha = "";
+  confirmaSenha = "";
+  tipoUsuario = COMUM;
+}
 
 void setup()
 {
@@ -96,16 +118,16 @@ void loop()
   {
     if (estadoAnteriorSistema != estadoAtualSistema)
     {
-      //
+      resetaValoresGlobais();
       msgUsuario.telaBemVindo();
       estadoAnteriorSistema = estadoAtualSistema;
     }
-    // Executa toda hora
 
     // Transiçoes
     if (digital.leitorTocado())
     {
-      if (digital.identificaUsuario() != -1)
+      int id = digital.identificaUsuario();
+      if (id != -1)
       {
         estadoAtualSistema = USUARIO_ENCONTRADO;
       }
@@ -172,43 +194,54 @@ void loop()
 
   else if (estadoAtualSistema == AUTENTICACAO)
   {
-    estadoAnteriorSistema = estadoAtualSistema;
+    if (estadoAnteriorSistema != estadoAtualSistema)
+    {
+      timer = millis();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
     File file = SD.open("/registros.txt", "r");
     Usuario user = registroUsuario.recuperaUsuario(file, id.toInt(), senha, TECLADO);
     file.close();
     if (user.id == -1)
     {
       estadoAtualSistema = USUARIO_NAO_CADASTRADO;
-      timer = millis();
     }
     else if (user.tipo == MASTER)
     {
       estadoAtualSistema = MENU_USUARIO_MASTER;
-
-      // funcao buscaIdNoArquivo
-      //  tranformaStringEmUsuario
     }
     else
     {
       msgUsuario.telaUsuarioEncontrado(user.nome);
+      if (millis() - timer > 3000)
+      {
+        // colocar estado para abrir a porta
+        estadoAtualSistema = INICIO;
+      }
     }
   }
 
   else if (estadoAtualSistema == MENU_USUARIO_MASTER)
   {
-    estadoAnteriorSistema = estadoAtualSistema;
-    msgUsuario.telaMenuMaster();
+    if (estadoAnteriorSistema != estadoAtualSistema)
+    {
+      estadoAnteriorSistema = estadoAtualSistema;
+      msgUsuario.telaMenuMaster();
+      resetaValoresGlobais();
+    }
 
     if (teclaAtual == '1')
     {
+      // abre porta
     }
     else if (teclaAtual == '2')
     {
+      estadoAtualSistema = CADASTRO_DIGITANDO_NOME;
       teclaAtual = '\0';
-      estadoAtualSistema = CADASTRANDO_USUARIO;
     }
     else if (teclaAtual == '3')
     {
+      // remove usuario
     }
     else if (teclaAtual == '4')
     {
@@ -217,7 +250,75 @@ void loop()
     }
   }
 
-  else if (estadoAtualSistema == CADASTRANDO_USUARIO)
+  else if (estadoAtualSistema == CADASTRO_DIGITANDO_NOME)
+  {
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      msgUsuario.telaCadastroDigiteNome("");
+      ultimaTeclaNaoNula = '\0';
+      timer = millis();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
+
+    if (letraAtual == '\0')
+    {
+      if (teclaAtual >= '0' && teclaAtual <= '9')
+      {
+        letraAtual = teclado.TECLAS_ALFABETO[teclaAtual - '0'].charAt(0);
+        msgUsuario.telaCadastroDigiteNome(nomeUsuario + letraAtual);
+        timer = millis();
+      }
+    }
+    else
+    {
+      if (millis() - timer > 1000)
+      {
+        nomeUsuario += letraAtual;
+        msgUsuario.telaCadastroDigiteNome(nomeUsuario);
+        letraAtual = '\0';
+        contadorLetras = 0;
+      }
+      else if (teclaAtual >= '0' && teclaAtual <= '9')
+      {
+        if (teclaAtual != ultimaTeclaNaoNula)
+        {
+          nomeUsuario += letraAtual;
+          letraAtual = teclado.TECLAS_ALFABETO[teclaAtual - '0'].charAt(0);
+          msgUsuario.telaCadastroDigiteNome(nomeUsuario + letraAtual);
+          contadorLetras = 0;
+          timer = millis();
+        }
+        else
+        {
+          contadorLetras++;
+          String grupoLetras = teclado.TECLAS_ALFABETO[teclaAtual - '0'];
+          letraAtual = grupoLetras.charAt(contadorLetras % grupoLetras.length());
+          msgUsuario.telaCadastroDigiteNome(nomeUsuario + letraAtual);
+          timer = millis();
+        }
+      }
+    }
+    if (teclaAtual == 'B')//backspace
+    {
+      // remove a letra ativa
+      if (letraAtual != '\0')
+      {
+        letraAtual = '\0';
+        msgUsuario.telaCadastroDigiteNome(nomeUsuario);
+      }
+      else if (nomeUsuario.length() > 0)
+      {
+        nomeUsuario.remove(nomeUsuario.length() - 1);
+        msgUsuario.telaCadastroDigiteNome(nomeUsuario);
+      }
+    }
+    if (teclaAtual == '#')
+    {
+      estadoAtualSistema = CADASTRO_DIGITANDO_SENHA;
+    }
+  }
+
+  else if (estadoAtualSistema == CADASTRO_DIGITANDO_SENHA)
   {
     if (estadoAtualSistema != estadoAnteriorSistema)
     {
@@ -293,7 +394,7 @@ void loop()
     if (millis() - timer > 3000)
     {
       // retorna ao inicio do cadastro
-      estadoAtualSistema = CADASTRANDO_USUARIO;
+      estadoAtualSistema = CADASTRO_DIGITANDO_SENHA;
     }
   }
   else if (estadoAtualSistema == CADASTRO_BIOMETRIA_ENCOSTE_DEDO)
@@ -302,11 +403,32 @@ void loop()
     msgUsuario.telaCadastroBiometriaEncosteDedo();
     if (digital.leitorTocado())
     {
-      bool primeiraImagemOk = digital.iniciaCriacaoDigital();
-      if (primeiraImagemOk)
+      if (digital.identificaUsuario()!=-1)
       {
-        estadoAtualSistema = CADASTRO_BIOMETRIA_RETIRE_DEDO;
+        estadoAtualSistema = CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO;
       }
+      else
+      {
+        bool primeiraImagemOk = digital.iniciaCriacaoDigital();
+        if (primeiraImagemOk)
+        {
+          estadoAtualSistema = CADASTRO_BIOMETRIA_RETIRE_DEDO;
+        }
+        // else erro
+      }
+    }
+  }
+  else if (estadoAtualSistema == CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO)
+  {
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      timer = millis();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
+    msgUsuario.telaCadastroBiometriaJaCadastradaErro();
+    if (millis() - timer > 3000)
+    {
+      estadoAtualSistema = CADASTRO_BIOMETRIA_ENCOSTE_DEDO;
     }
   }
 
@@ -377,16 +499,24 @@ void loop()
   {
     if (estadoAtualSistema != estadoAnteriorSistema)
     {
-    //abre o arquivo no modo de escrita "append", que escreve no final do arquivo e mantem o conteudo
+      // abre o arquivo no modo de escrita "append", que escreve no final do arquivo e mantem o conteudo
       File file = SD.open("/registros.txt", "a");
-      //chama a funcao que salva no SD card
-      registroUsuario.salvaUsuarioSdCard(file, idGerado, idBiometria, tipoUsuario, senha);
+      // chama a funcao que salva no SD card
+      Usuario usuario;
+      usuario.id = idGerado;
+      usuario.idBiometria = idBiometria;
+      usuario.nome = nomeUsuario;
+      usuario.tipo = tipoUsuario;
+      usuario.senha = senha;
+
+      registroUsuario.salvaUsuarioSdCard(file, usuario);
       file.close();
       estadoAnteriorSistema = estadoAtualSistema;
     }
     msgUsuario.telaUsuarioCadastrado();
     if (teclaAtual == '#')
     {
+      // futuramente, adicionar reconhecimento facial
       estadoAtualSistema = INICIO;
     }
   }
@@ -421,5 +551,9 @@ void loop()
   }
 
   ultimaTecla = teclaAtual;
+  if (ultimaTecla != '\0')
+  {
+    ultimaTeclaNaoNula = ultimaTecla;
+  }
   // estadoAnteriorSistema = estadoAtualSistema;
 }

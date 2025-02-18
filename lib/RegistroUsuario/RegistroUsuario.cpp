@@ -88,11 +88,12 @@ String RegistroUsuario::buscaIdNoArquivo(Stream &stream, int id)
     return "";
 }
 
-bool RegistroUsuario::salvaUsuarioSdCard(Stream &stream, int id, int idBiometria, TipoUsuario tipoUsuario, String senha)
+bool RegistroUsuario::salvaUsuarioSdCard(Stream &stream, Usuario usuario)
 {
     // Cria a string com os dados do usuário
-    String stringUsuario = "id:" + String(id) + ",idBiometria:" + String(idBiometria) + ",nome:Pierre," + ",tipo:" + tipoUsuario + ",senha:" + String(senha) + ";";
-    //escreve no arquivo
+    String stringUsuario = "id:" + String(usuario.id) + ",idBiometria:" + 
+    String(usuario.idBiometria) + ",nome:" + usuario.nome + ",tipo:" + usuario.tipo + ",senha:" + String(usuario.senha) + ";";
+    // escreve no arquivo
     stream.println(stringUsuario);
     return true;
 }

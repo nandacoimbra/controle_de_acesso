@@ -24,12 +24,14 @@ public:
     // teste
     void telaMsgUsuarioEncontrado();
     void telaMenuMaster();
+    void telaCadastroDigiteNome(String digitos = "");
     void telaCadastroDigiteSenha(String digitos = "", int id = 0);
     void telaCadastroDigiteNovamenteSenha(String digitos = "");
     void telaSenhaIncorreta();
     void telaUsuarioCadastrado();
     void telaCadastroBiometriaEncosteDedo();
-    void telaBiometriaJaCadastrada(int id);
+    //incluir id
+    void telaCadastroBiometriaJaCadastradaErro();
     void telaBiometriaCadastradaSucesso();
     void telaCadastroBiometriaRetireDedo();
     void telaCadastroBiometriaEncosteDedoNovamente();

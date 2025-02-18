@@ -37,5 +37,5 @@ public:
     String buscaIdNoArquivo(Stream &stream, int id);
     int buscaProximoIdDisponivel(Stream &stream);
     int buscaIdBiometriaDisponivel(Stream &stream);
-    bool salvaUsuarioSdCard(Stream &stream, int id, int idBiometria, TipoUsuario tipoUsuario, String senha);
+    bool salvaUsuarioSdCard(Stream &stream, Usuario usuario);
 };

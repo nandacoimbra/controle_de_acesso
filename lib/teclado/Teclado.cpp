@@ -31,11 +31,6 @@ char Teclado::teclaPressionada(void)
     return '\0';
 }
 
-// void Teclado::armazenaDigito(char tecla)
-// {
-//     digitosArmazenados += tecla;
-// }
-
 void Teclado::armazenaDigito(char tecla)
 {
     if (tecla == 'B')

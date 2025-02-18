@@ -79,6 +79,15 @@ void MensagemUsuario::telaMenuMaster()
     telaSecundaria.desenhaTexto(tela);
 }
 
+void MensagemUsuario::telaCadastroDigiteNome(String digitos)
+{
+    String tela = "Informe o nome do usuario: \n";
+    tela += digitos + "\n";
+    tela += "Pressione # para confirmar\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
 void MensagemUsuario::telaCadastroDigiteSenha(String digitos, int id)
 {
     for (int i = 0; i < digitos.length(); i++)
@@ -150,9 +159,9 @@ void MensagemUsuario::telaCadastroInformeTipoUsuario()
 }
 
 
-void MensagemUsuario::telaBiometriaJaCadastrada(int id)
+void MensagemUsuario::telaCadastroBiometriaJaCadastradaErro()
 {
-    String tela = "Biometria ja cadastrada no id: " + id;
+    String tela = "Biometria ja cadastrada";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }

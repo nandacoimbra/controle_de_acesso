@@ -17,6 +17,7 @@ class Comandos
     String buscaComando();
     String lerSerial();
     void executarComandos(String cmd);
+    bool mudarEstado(String cmd);
 };
 
 #endif

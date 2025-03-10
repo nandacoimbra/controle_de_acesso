@@ -27,6 +27,33 @@ void MensagemUsuario::desenhaTelaDigiteId(String digitos)
     telaSecundaria.desenhaTexto(tela);
 }
 
+void MensagemUsuario::telaDigiteIdRemoveUsuario(String digitos)
+{
+    String tela = "Digite o ID do usuario a ser removido\n";
+    tela += "ID:" + digitos + "\n";
+    tela += "Pressione # \n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaRemoveUsuarioIdNaoEncontrado()
+{
+    String tela = "Usuario nao encontrado\n";
+    tela += "Pressione # para tentar novamente\n";
+    tela += "Pressione * para retornar ao Menu\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaConfirmaRemocaoUsuario(String nomeUsuario)
+{
+    String tela = "Confirma remocao do usuario" + nomeUsuario + "?\n";
+    tela += "Pressione # para SIM\n";
+    tela += "Pressione * para NAO\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
 void MensagemUsuario::desenhaTelaDigiteSenha(String digitos)
 {
     for (int i = 0; i < digitos.length(); i++)

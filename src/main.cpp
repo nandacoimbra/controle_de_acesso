@@ -26,7 +26,6 @@ enum Estado
   USUARIO_NAO_CADASTRADO,
   USUARIO_ENCONTRADO,
   MENU_USUARIO_MASTER,
-  REMOVENDO_USUARIO,
   CADASTRO_DIGITANDO_SENHA,
   CADASTRO_DIGITANDO_NOME,
   CADASTRO_CONFIRMANDO_SENHA_USUARIO,
@@ -38,6 +37,10 @@ enum Estado
   SALVA_USUARIO_SD_CARD,
   CADASTRO_BIOMETRIA_ENCOSTE_DEDO_NOVAMENTE,
   BIOMETRIA_CADASTRADA_COM_SUCESSO,
+  REMOVE_USUARIO_INFORME_ID,
+  REMOVE_USUARIO_ID_NAO_ENCONTRADO,
+  REMOVE_USUARIO_CONFIRMA_ID,
+  REMOVE_USUARIO_SUCESSO
 
 };
 
@@ -64,6 +67,7 @@ int idBiometria;                // idBiometria gerado para um novo usuario
 String senha;
 String confirmaSenha;
 TipoUsuario tipoUsuario;
+String stringEncontrada;
 
 long timer = 0;
 
@@ -80,6 +84,7 @@ void resetaValoresGlobais()
   senha = "";
   confirmaSenha = "";
   tipoUsuario = COMUM;
+  stringEncontrada = "";
 }
 
 void setup()
@@ -140,8 +145,6 @@ void loop()
     {
       String comandoSerial = Serial.readString();
       comandoSerial.toUpperCase();
-      // comando.executarComandos(comandoSerial);
-      Serial.println("teste serial");
     }
     else if (teclaAtual != '\0')
     {
@@ -241,7 +244,8 @@ void loop()
     }
     else if (teclaAtual == '3')
     {
-      // remove usuario
+      estadoAtualSistema = REMOVE_USUARIO_INFORME_ID;
+      teclaAtual = '\0';
     }
     else if (teclaAtual == '4')
     {
@@ -298,7 +302,7 @@ void loop()
         }
       }
     }
-    if (teclaAtual == 'B')//backspace
+    if (teclaAtual == 'B') // backspace
     {
       // remove a letra ativa
       if (letraAtual != '\0')
@@ -403,7 +407,7 @@ void loop()
     msgUsuario.telaCadastroBiometriaEncosteDedo();
     if (digital.leitorTocado())
     {
-      if (digital.identificaUsuario()!=-1)
+      if (digital.identificaUsuario() != -1)
       {
         estadoAtualSistema = CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO;
       }
@@ -534,7 +538,85 @@ void loop()
       estadoAtualSistema = INICIO;
     }
   }
+  else if (estadoAtualSistema == REMOVE_USUARIO_INFORME_ID)
+  {
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
+    // Executa toda hora
+    if (teclaAtual != '\0' && teclaAtual != '#')
+    {
+      teclado.armazenaDigito(teclaAtual);
+    }
 
+    msgUsuario.desenhaTelaDigiteId(teclado.digitosArmazenados);
+
+    // Transições
+    if (teclaAtual == '#')
+    {
+      id = teclado.digitosArmazenados;
+
+      estadoAtualSistema = REMOVE_USUARIO_CONFIRMA_ID;
+      teclaAtual = '\0';
+      teclado.limpaDigitosArmazenados();
+    }
+  }
+
+  else if (estadoAtualSistema == REMOVE_USUARIO_CONFIRMA_ID)
+  {
+    if (estadoAnteriorSistema != estadoAtualSistema)
+    {
+      timer = millis();
+      File file = SD.open("/registros.txt", "r");
+      stringEncontrada = registroUsuario.buscaIdNoArquivo(file, id.toInt());
+      if (stringEncontrada != "")
+      {
+        Usuario user = registroUsuario.transformaTextoEmUsuario(stringEncontrada);
+        file.close();
+        estadoAnteriorSistema = estadoAtualSistema;
+        nomeUsuario = user.nome;
+      }
+      else
+      {
+        estadoAnteriorSistema = estadoAtualSistema;
+        estadoAtualSistema = REMOVE_USUARIO_ID_NAO_ENCONTRADO;
+      }
+    }
+    // se encontrar, pede confirmação para remover
+    msgUsuario.telaConfirmaRemocaoUsuario(nomeUsuario);
+
+    // se confirmar, remove
+    if (teclaAtual == '#')
+    {
+      estadoAtualSistema = REMOVE_USUARIO_SUCESSO;
+      teclaAtual = '\0';
+      teclado.limpaDigitosArmazenados();
+    }
+    else if (teclaAtual == '*')
+    {
+      // se não confirmar, volta para o inicio
+      estadoAtualSistema = MENU_USUARIO_MASTER;
+    }
+  }
+
+  else if (estadoAtualSistema == REMOVE_USUARIO_ID_NAO_ENCONTRADO)
+  {
+    if (estadoAnteriorSistema != estadoAtualSistema)
+    {
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
+    msgUsuario.telaRemoveUsuarioIdNaoEncontrado();
+
+    if (teclaAtual == '#')
+    {
+      estadoAtualSistema = REMOVE_USUARIO_INFORME_ID;
+    }
+    else if (teclaAtual == '*')
+    {
+      estadoAtualSistema = MENU_USUARIO_MASTER;
+    }
+  }
   else if (estadoAtualSistema == USUARIO_ENCONTRADO)
   {
     // Executa só na entrada

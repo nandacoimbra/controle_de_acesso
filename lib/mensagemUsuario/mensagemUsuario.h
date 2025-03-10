@@ -21,9 +21,11 @@ public:
     void desenhaTelaAutenticacao();
     void telaUsuarioNaoCadastrado();
     void telaUsuarioEncontrado(String nome);
-    // teste
     void telaMsgUsuarioEncontrado();
     void telaMenuMaster();
+    void telaDigiteIdRemoveUsuario(String digitos = "");
+    void telaRemoveUsuarioIdNaoEncontrado();
+    void telaConfirmaRemocaoUsuario(String nomeUsuario = "");
     void telaCadastroDigiteNome(String digitos = "");
     void telaCadastroDigiteSenha(String digitos = "", int id = 0);
     void telaCadastroDigiteNovamenteSenha(String digitos = "");

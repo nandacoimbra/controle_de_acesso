@@ -26,6 +26,8 @@ public:
     void telaDigiteIdRemoveUsuario(String digitos = "");
     void telaRemoveUsuarioIdNaoEncontrado();
     void telaConfirmaRemocaoUsuario(String nomeUsuario = "");
+    void telaUsuarioRemovidoComSucesso();
+    void telaErroAoRemoverUsuario();
     void telaCadastroDigiteNome(String digitos = "");
     void telaCadastroDigiteSenha(String digitos = "", int id = 0);
     void telaCadastroDigiteNovamenteSenha(String digitos = "");
@@ -38,5 +40,9 @@ public:
     void telaCadastroBiometriaRetireDedo();
     void telaCadastroBiometriaEncosteDedoNovamente();
     void telaCadastroInformeTipoUsuario(); 
+    void telaApagarTodasDigitais(); 
+    void telaFaceDetectada();
+    void telaCadastroPrepararParaFoto();
+    void telaCadastroTirandoFoto();
  
 };

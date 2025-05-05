@@ -1,6 +1,6 @@
 #include "RegistroUsuario.h"
 
-// Formato esperado da string: "nome:XXXXXXXXX,tipo:X,id:XXXXXXXX,senha:XXXXXXXXXXX;"
+// Formato esperado da string: "nome:XXXXXXXXX,tipo:X,id:XXXXXXXX,idBiometria:XXXXXX,senha:XXXXXXXXXXX;"
 Usuario RegistroUsuario::transformaTextoEmUsuario(String s)
 {
     Usuario usuario;
@@ -91,11 +91,40 @@ String RegistroUsuario::buscaIdNoArquivo(Stream &stream, int id)
 bool RegistroUsuario::salvaUsuarioSdCard(Stream &stream, Usuario usuario)
 {
     // Cria a string com os dados do usuário
-    String stringUsuario = "id:" + String(usuario.id) + ",idBiometria:" + 
-    String(usuario.idBiometria) + ",nome:" + usuario.nome + ",tipo:" + usuario.tipo + ",senha:" + String(usuario.senha) + ";";
+    String stringUsuario = "id:" + String(usuario.id) + ",idBiometria:" +
+                           String(usuario.idBiometria) + ",nome:" + usuario.nome + ",tipo:" + usuario.tipo + ",senha:" + String(usuario.senha) + ";";
     // escreve no arquivo
     stream.println(stringUsuario);
     return true;
+}
+
+bool RegistroUsuario::removeUsuarioSdCard(Stream &stream, Stream &streamTemp, Usuario usuario)
+{
+    bool usuarioRemovido = false;
+
+    while (stream.available()) {
+        String linha = stream.readStringUntil('\n');  // Lê até a quebra de linha
+        linha.trim();  // Remove espaços extras e quebras de linha no início e no fim
+    
+        if (linha.isEmpty()) {
+            continue;  // Ignora linhas vazias
+        }
+    
+        // linha += ";";  // Adiciona ';' para manter o formato original
+    
+        if (linha.indexOf("id:" + String(usuario.id) + ",") == -1) {
+            streamTemp.println(linha);  // Escreve no arquivo temporário
+        } else {
+            usuarioRemovido = true;
+        }
+    }
+
+    if (usuarioRemovido)
+    {
+        return true;
+    }
+
+    return false;
 }
 
 int RegistroUsuario::buscaProximoIdDisponivel(Stream &stream)
@@ -144,3 +173,4 @@ int RegistroUsuario::buscaIdBiometriaDisponivel(Stream &stream)
 
     return -1;
 }
+

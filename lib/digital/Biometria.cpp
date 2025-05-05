@@ -66,7 +66,7 @@ bool Biometria::leitorTocado()
 bool Biometria::apagarDigital(int id)
 {
     // Verifica se a posição é válida ou não
-    if (id < 1 || id > 149)
+    if (id < 1 || id > 162)
     {
         return false;
     }

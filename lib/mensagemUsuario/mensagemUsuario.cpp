@@ -54,6 +54,13 @@ void MensagemUsuario::telaConfirmaRemocaoUsuario(String nomeUsuario)
     telaSecundaria.desenhaTexto(tela);
 }
 
+void MensagemUsuario::telaUsuarioRemovidoComSucesso()
+{
+    String tela = "Usuario removido com sucesso\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
 void MensagemUsuario::desenhaTelaDigiteSenha(String digitos)
 {
     for (int i = 0; i < digitos.length(); i++)
@@ -101,7 +108,15 @@ void MensagemUsuario::telaMenuMaster()
     tela += "1 - Abrir porta\n";
     tela += "2 - Cadastrar usuario\n";
     tela += "3 - Remover usuario\n";
-    tela += "4 - Menu inicial";
+    tela += "4 - Menu inicial\n";
+    tela += "5 - Apagar Digitais";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaErroAoRemoverUsuario()
+{
+    String tela = "Erro ao remover usuario\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }
@@ -185,6 +200,36 @@ void MensagemUsuario::telaCadastroInformeTipoUsuario()
     telaSecundaria.desenhaTexto(tela);
 }
 
+void MensagemUsuario::telaApagarTodasDigitais()
+{
+    String tela = "Apagando todas as digitais\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaFaceDetectada()
+{
+    String tela = "Rosto encontrado\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaCadastroPrepararParaFoto()
+{
+    String tela = "Reconhecimento Facial\n";
+    tela += "Preparar para foto\n";
+    tela += "Posicione o rosto corretamente\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaCadastroTirandoFoto()
+{
+    String tela = "Tirando foto\n";
+    tela += "Aguarde ...\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
 
 void MensagemUsuario::telaCadastroBiometriaJaCadastradaErro()
 {

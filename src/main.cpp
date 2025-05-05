@@ -6,10 +6,15 @@
 #include "MensagemUsuario.h"
 #include "TelaSerial.h"
 #include "RegistroUsuario.h"
+#include "ComunicacaoSerial.h"
 // sd card
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"
+// servidor
+#include "Servidor.h"
+#include "servidor.h"
+#include <WiFi.h>
 
 #define SDA_PIN 22
 #define SCL_PIN 23
@@ -40,7 +45,12 @@ enum Estado
   REMOVE_USUARIO_INFORME_ID,
   REMOVE_USUARIO_ID_NAO_ENCONTRADO,
   REMOVE_USUARIO_CONFIRMA_ID,
-  REMOVE_USUARIO_SUCESSO
+  REMOVENDO_USUARIO,
+  USUARIO_REMOVIDO_COM_SUCESSO,
+  ERRO_REMOVER_USUARIO,
+  FACE_DETECTADA,
+  CADASTRO_PREPARAR_PARA_FOTO,
+  CADASTRO_TIRANDO_FOTO
 
 };
 
@@ -51,10 +61,12 @@ Comandos comando(digital);
 TelaSerial telaSerial(Serial);
 MensagemUsuario msgUsuario(displayOled, telaSerial);
 RegistroUsuario registroUsuario;
+ComunicacaoSerial comunicacaoSerial;
 
 // define o estado atual do sistema, de acordo com o fluxograma
 int estadoAtualSistema = INICIO;
 int estadoAnteriorSistema = INVALIDO;
+int contaArquivosRemovidos = 0;
 
 char ultimaTecla = '\0';        // Variável para armazenar a última tecla pressionada
 char ultimaTeclaNaoNula = '\0'; // Variável para armazenar a última tecla pressionada que não é nula
@@ -68,8 +80,16 @@ String senha;
 String confirmaSenha;
 TipoUsuario tipoUsuario;
 String stringEncontrada;
+bool usuarioRemovido = false;
 
 long timer = 0;
+
+const char *ssid = "House";         // SSID da sua rede Wi-Fi
+const char *senhaWifi = "12345678"; // Senha da rede Wi-Fi
+const int pinoTranca = 25;          // Pino ligado à fechadura
+
+// Criação do objeto servidor com os dados necessários
+Servidor servidor(ssid, senhaWifi, pinoTranca);
 
 void resetaValoresGlobais()
 {
@@ -85,6 +105,7 @@ void resetaValoresGlobais()
   confirmaSenha = "";
   tipoUsuario = COMUM;
   stringEncontrada = "";
+  usuarioRemovido = false;
 }
 
 void setup()
@@ -102,6 +123,8 @@ void setup()
     Serial.println("Card Mount Failed");
     return;
   }
+  // servidor.iniciar(); // Inicia o servidor
+  //                     // Aguarda conexão
 
   File file = SD.open("/registros.txt", "r");
   String stringEncontrada = registroUsuario.buscaIdNoArquivo(file, 2500);
@@ -116,6 +139,7 @@ void setup()
 
 void loop()
 {
+  // servidor.loop(); // Mantém o servidor respondendo aos clientes
 
   char teclaAtual = teclado.teclaPressionada();
 
@@ -144,7 +168,10 @@ void loop()
     else if (Serial.available())
     {
       String comandoSerial = Serial.readString();
-      comandoSerial.toUpperCase();
+      if (comandoSerial)
+      {
+        estadoAtualSistema = FACE_DETECTADA;
+      }
     }
     else if (teclaAtual != '\0')
     {
@@ -152,6 +179,16 @@ void loop()
       teclaAtual = '\0';
     }
     //----------------------------
+  }
+
+  else if (estadoAtualSistema == FACE_DETECTADA)
+  {
+    estadoAnteriorSistema = estadoAtualSistema;
+    msgUsuario.telaFaceDetectada();
+    if (teclaAtual == '#')
+    {
+      estadoAtualSistema = INICIO;
+    }
   }
 
   else if (estadoAtualSistema == INSERCAO_ID_USUARIO)
@@ -252,8 +289,72 @@ void loop()
       teclaAtual = '\0';
       estadoAtualSistema = INICIO;
     }
+    else if (teclaAtual == '5')
+    {
+      estadoAtualSistema = INICIO;
+      teclaAtual = '\0';
+      digital.apagarTodasDigitais();
+    }
+    else if (teclaAtual == '6')
+    {
+      estadoAtualSistema = CADASTRO_PREPARAR_PARA_FOTO;
+      teclaAtual = '\0';
+    }
   }
 
+  else if (estadoAtualSistema == REMOVE_USUARIO_INFORME_ID)
+  {
+    estadoAnteriorSistema = estadoAtualSistema;
+    // Executa toda hora
+    if (teclaAtual != '\0' && teclaAtual != '#')
+    {
+      teclado.armazenaDigito(teclaAtual);
+    }
+    msgUsuario.telaDigiteIdRemoveUsuario(teclado.digitosArmazenados);
+
+    // Transições
+    if (teclaAtual == '#')
+    {
+      id = teclado.digitosArmazenados;
+      estadoAtualSistema = REMOVE_USUARIO_CONFIRMA_ID;
+      teclaAtual = '\0';
+      teclado.limpaDigitosArmazenados();
+    }
+  }
+
+  else if (estadoAtualSistema == REMOVE_USUARIO_CONFIRMA_ID)
+  {
+    estadoAnteriorSistema = estadoAtualSistema;
+    // Executa toda hora
+    if (teclaAtual != '\0' && teclaAtual != '#')
+    {
+      teclado.armazenaDigito(teclaAtual);
+    }
+    msgUsuario.telaConfirmaRemocaoUsuario(teclado.digitosArmazenados);
+
+    // Transições
+    if (teclaAtual == '#')
+    {
+      id = teclado.digitosArmazenados;
+      estadoAtualSistema = REMOVENDO_USUARIO;
+      teclaAtual = '\0';
+      teclado.limpaDigitosArmazenados();
+    }
+  }
+
+  else if (estadoAtualSistema == REMOVENDO_USUARIO)
+  {
+    estadoAnteriorSistema = estadoAtualSistema;
+    File file = SD.open("/registros.txt", "r");
+    File fileTemp = SD.open("/temp.txt", "w");
+    Usuario usuarioRemovido = registroUsuario.recuperaUsuario(file, id.toInt(), senha, TECLADO);
+
+    if (usuarioRemovido.id != -1)
+    {
+      usuarioRemovido.idBiometria = -1; // remove a biometria do usuario removido
+      registroUsuario.removeUsuarioSdCard(file, fileTemp, usuarioRemovido);
+    }
+  }
   else if (estadoAtualSistema == CADASTRO_DIGITANDO_NOME)
   {
     if (estadoAtualSistema != estadoAnteriorSistema)
@@ -407,19 +508,24 @@ void loop()
     msgUsuario.telaCadastroBiometriaEncosteDedo();
     if (digital.leitorTocado())
     {
-      if (digital.identificaUsuario() != -1)
-      {
-        estadoAtualSistema = CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO;
-      }
-      else
-      {
-        bool primeiraImagemOk = digital.iniciaCriacaoDigital();
+      // if (digital.identificaUsuario() != -1)
+      // {
+      //   estadoAtualSistema = CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO;
+      // }
+      // else
+      // {
+      //   bool primeiraImagemOk = digital.iniciaCriacaoDigital();
+      //   if (primeiraImagemOk)
+      //   {
+      //     estadoAtualSistema = CADASTRO_BIOMETRIA_RETIRE_DEDO;
+      //   }
+      //   // else erro
+      // }
+      bool primeiraImagemOk = digital.iniciaCriacaoDigital();
         if (primeiraImagemOk)
         {
           estadoAtualSistema = CADASTRO_BIOMETRIA_RETIRE_DEDO;
         }
-        // else erro
-      }
     }
   }
   else if (estadoAtualSistema == CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO)
@@ -482,8 +588,45 @@ void loop()
     if (millis() - timer > 3000)
     {
       estadoAtualSistema = CADASTRO_INFORMA_TIPO_USUARIO;
+      // tirar foto usuário
     }
   }
+
+  // aqui o usuario vai tirar a foto (ainda em fase de testes)
+
+  else if (estadoAtualSistema == CADASTRO_PREPARAR_PARA_FOTO)
+  {
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      estadoAnteriorSistema = estadoAtualSistema;
+      timer = millis();
+      msgUsuario.telaCadastroPrepararParaFoto();
+    }
+    if (millis() - timer > 5000)
+    {
+      estadoAtualSistema = CADASTRO_TIRANDO_FOTO;
+    }
+  }
+
+  else if (estadoAtualSistema == CADASTRO_TIRANDO_FOTO)
+  {
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      msgUsuario.telaCadastroTirandoFoto();
+      estadoAnteriorSistema = estadoAtualSistema;
+      comunicacaoSerial.tirarFotos(String(idGerado), nomeUsuario);
+    }
+
+    if (Serial.available())
+    {
+      String resposta = Serial.readString();
+      if (resposta == "foto_ok")
+      {
+        estadoAtualSistema = CADASTRO_INFORMA_TIPO_USUARIO;
+      }
+    }
+  }
+
   else if (estadoAtualSistema == CADASTRO_INFORMA_TIPO_USUARIO)
   {
     estadoAnteriorSistema = estadoAtualSistema;
@@ -589,7 +732,7 @@ void loop()
     // se confirmar, remove
     if (teclaAtual == '#')
     {
-      estadoAtualSistema = REMOVE_USUARIO_SUCESSO;
+      estadoAtualSistema = REMOVENDO_USUARIO;
       teclaAtual = '\0';
       teclado.limpaDigitosArmazenados();
     }
@@ -611,8 +754,88 @@ void loop()
     if (teclaAtual == '#')
     {
       estadoAtualSistema = REMOVE_USUARIO_INFORME_ID;
+      teclaAtual = '\0';
     }
     else if (teclaAtual == '*')
+    {
+      estadoAtualSistema = MENU_USUARIO_MASTER;
+      teclaAtual = '\0';
+    }
+  }
+  else if (estadoAtualSistema == REMOVENDO_USUARIO)
+  {
+    if (estadoAnteriorSistema != estadoAtualSistema)
+    {
+      timer = millis();
+      File file = SD.open("/registros.txt", "r");
+      if (!file)
+      {
+        Serial.println("Erro ao abrir registros.txt para leitura!");
+        return;
+      }
+      File fileTemp = SD.open("/registrosTemp.txt", "w");
+      if (!fileTemp)
+      {
+        Serial.println("Erro ao criar registrosTemp.txt!");
+        // file.close();
+        return;
+      }
+      usuarioRemovido = registroUsuario.removeUsuarioSdCard(file, fileTemp, registroUsuario.transformaTextoEmUsuario(stringEncontrada));
+      file.close();
+      fileTemp.close();
+      estadoAnteriorSistema = estadoAtualSistema;
+
+      if (usuarioRemovido)
+      {
+        Serial.println("Usuario removido com sucesso!:");
+        Serial.println(usuarioRemovido);
+        SD.remove("/registros.txt");
+        SD.rename("/registrosTemp.txt", "/registros.txt");
+
+        // bool arquivoRenomeado = SD.rename("/registros.txt", "/registrosTemp.txt");
+
+        // if (arquivoRenomeado)
+        // {
+        //   serial
+        //   SD.remove("/registros.txt");
+        // }
+        // SD.rename("/registrosTemp.txt", "/registros.txt");
+        digital.apagarDigital(registroUsuario.transformaTextoEmUsuario(stringEncontrada).idBiometria);
+        msgUsuario.telaUsuarioRemovidoComSucesso();
+        contaArquivosRemovidos++;
+
+        estadoAtualSistema = USUARIO_REMOVIDO_COM_SUCESSO;
+      }
+      else
+      {
+        estadoAtualSistema = ERRO_REMOVER_USUARIO;
+      }
+    }
+  }
+  else if (estadoAtualSistema == USUARIO_REMOVIDO_COM_SUCESSO)
+  {
+    // Executa só na entrada
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      timer = millis();
+      estadoAnteriorSistema = estadoAtualSistema;
+      msgUsuario.telaUsuarioRemovidoComSucesso();
+    }
+    if (millis() - timer > 3000)
+    {
+      estadoAtualSistema = MENU_USUARIO_MASTER;
+    }
+  }
+  else if (estadoAtualSistema == ERRO_REMOVER_USUARIO)
+  {
+    // Executa só na entrada
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      timer = millis();
+      msgUsuario.telaErroAoRemoverUsuario();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
+    if (millis() - timer > 3000)
     {
       estadoAtualSistema = MENU_USUARIO_MASTER;
     }

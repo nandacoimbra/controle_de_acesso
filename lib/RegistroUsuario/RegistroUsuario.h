@@ -38,4 +38,5 @@ public:
     int buscaProximoIdDisponivel(Stream &stream);
     int buscaIdBiometriaDisponivel(Stream &stream);
     bool salvaUsuarioSdCard(Stream &stream, Usuario usuario);
+    bool removeUsuarioSdCard(Stream &stream, Stream &streamTemp, Usuario usuario);
 };

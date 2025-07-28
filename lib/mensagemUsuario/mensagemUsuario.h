@@ -16,7 +16,11 @@ public:
 
     void telaBemVindo();
     void telaMenuInicial();
+    void telaAguardandoReconhecimentoFacial();
+    void telaFaceNaoReconhecida();
     void desenhaTelaDigiteId(String digitos = "");
+    void telaIdNaoInformado();
+    void telaSenhaNaoInformada();
     void desenhaTelaDigiteSenha(String digitos = "");
     void desenhaTelaAutenticacao();
     void telaUsuarioNaoCadastrado();

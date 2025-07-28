@@ -41,12 +41,15 @@ Usuario RegistroUsuario::recuperaUsuario(Stream &stream, int id, String senha, T
     // Busca o usuário com o ID fornecido no fluxo de dados
     String stringEncontrada = buscaIdNoArquivo(stream, id);
     Usuario usuario = transformaTextoEmUsuario(stringEncontrada);
-    if (autenticacao == TECLADO)
+    if (autenticacao == RECONHECIMENTO_FACIAL)
     {
-        if (usuario.senha == senha)
-        {
-            return usuario;
-        }
+        // Se a autenticação for por reconhecimento facial, não verifica a senha
+        return usuario;
+    }
+    else if (usuario.senha == senha && usuario.id == id)
+    {
+        // Se a senha e o ID coincidirem, retorna o usuário
+        return usuario;
     }
 
     // Se a autenticação falhar, retorna um objeto Usuario vazio
@@ -102,19 +105,24 @@ bool RegistroUsuario::removeUsuarioSdCard(Stream &stream, Stream &streamTemp, Us
 {
     bool usuarioRemovido = false;
 
-    while (stream.available()) {
-        String linha = stream.readStringUntil('\n');  // Lê até a quebra de linha
-        linha.trim();  // Remove espaços extras e quebras de linha no início e no fim
-    
-        if (linha.isEmpty()) {
-            continue;  // Ignora linhas vazias
+    while (stream.available())
+    {
+        String linha = stream.readStringUntil('\n'); // Lê até a quebra de linha
+        linha.trim();                                // Remove espaços extras e quebras de linha no início e no fim
+
+        if (linha.isEmpty())
+        {
+            continue; // Ignora linhas vazias
         }
-    
+
         // linha += ";";  // Adiciona ';' para manter o formato original
-    
-        if (linha.indexOf("id:" + String(usuario.id) + ",") == -1) {
-            streamTemp.println(linha);  // Escreve no arquivo temporário
-        } else {
+
+        if (linha.indexOf("id:" + String(usuario.id) + ",") == -1)
+        {
+            streamTemp.println(linha); // Escreve no arquivo temporário
+        }
+        else
+        {
             usuarioRemovido = true;
         }
     }
@@ -173,4 +181,3 @@ int RegistroUsuario::buscaIdBiometriaDisponivel(Stream &stream)
 
     return -1;
 }
-

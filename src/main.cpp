@@ -23,8 +23,12 @@ enum Estado
 {
   INVALIDO,
   INICIO,
+  RECONHECIMENTO_FACIAL_AGUARDANDO,
+  RECONHECIMENTO_FACIAL_PROCESSANDO,
   INSERCAO_ID_USUARIO,
+  ERRO_INSERCAO_ID_USUARIO,
   INSERCAO_SENHA_USUARIO,
+  ERRO_INSERCAO_SENHA_USUARIO,
   AUTENTICACAO,
   ABRINDO_PORTA,
   PORTA_ABERTA,
@@ -81,6 +85,7 @@ String confirmaSenha;
 TipoUsuario tipoUsuario;
 String stringEncontrada;
 bool usuarioRemovido = false;
+bool emCadastro = false;
 
 long timer = 0;
 
@@ -135,6 +140,7 @@ void setup()
   Serial.printf("id: %d\n", usuario.id);
   Serial.printf("tipo: %d\n", usuario.tipo);
   Serial.println("senha: " + usuario.senha);
+  pinMode(pinoTranca, OUTPUT);
 }
 
 void loop()
@@ -152,6 +158,20 @@ void loop()
       estadoAnteriorSistema = estadoAtualSistema;
     }
 
+    else if (teclaAtual == 'C') // aperte a tecla C para reconhecimento facial
+    {
+      estadoAnteriorSistema = estadoAtualSistema;
+      estadoAtualSistema = RECONHECIMENTO_FACIAL_AGUARDANDO;
+      teclaAtual = '\0';
+    }
+
+    else if (teclaAtual == '#') // aperte a tecla # para login com teclado
+    {
+      estadoAnteriorSistema = estadoAtualSistema;
+      estadoAtualSistema = INSERCAO_ID_USUARIO;
+      teclaAtual = '\0';
+    }
+
     // Transiçoes
     if (digital.leitorTocado())
     {
@@ -167,26 +187,87 @@ void loop()
     }
     else if (Serial.available())
     {
-      String comandoSerial = Serial.readString();
-      if (comandoSerial)
+      String comandoSerial = Serial.readStringUntil('\n');
+      comandoSerial.trim();
+
+      if (comandoSerial == "cadastro_iniciado")
       {
-        estadoAtualSistema = FACE_DETECTADA;
+        emCadastro = true;
+        estadoAtualSistema = CADASTRO_TIRANDO_FOTO;
+      }
+      else if (comandoSerial == "cadastro_finalizado")
+      {
+        emCadastro = false;
+        estadoAtualSistema = CADASTRO_INFORMA_TIPO_USUARIO;
       }
     }
-    else if (teclaAtual != '\0')
-    {
-      estadoAtualSistema = INSERCAO_ID_USUARIO;
-      teclaAtual = '\0';
-    }
-    //----------------------------
   }
 
-  else if (estadoAtualSistema == FACE_DETECTADA)
+  else if (estadoAtualSistema == RECONHECIMENTO_FACIAL_AGUARDANDO)
   {
-    estadoAnteriorSistema = estadoAtualSistema;
-    msgUsuario.telaFaceDetectada();
-    if (teclaAtual == '#')
+    if (estadoAnteriorSistema != estadoAtualSistema)
     {
+      msgUsuario.telaAguardandoReconhecimentoFacial();
+      // Comando para app em Python p/ iniciar reconhecimento facial
+      comunicacaoSerial.iniciarReconhecimentoFacial();
+      timer = millis();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
+
+    // Aguarda resposta da serial
+    if (Serial.available())
+    {
+      String resposta = Serial.readStringUntil('\n');
+      resposta.trim();
+      if (resposta.startsWith("face_detectada:")) // Exemplo: "face_detectada:1234"
+      {
+        id = resposta.substring(resposta.indexOf(':') + 1);
+        // id.trim();
+        // Serial.println("Usuario detectado: " + id);
+        Serial.print("ID recebido: ");
+        Serial.println(id);
+        Serial.print("ID convertido: ");
+        Serial.println(id.toInt());
+        estadoAtualSistema = RECONHECIMENTO_FACIAL_PROCESSANDO;
+      }
+      else if (resposta == "face_nao_reconhecida")
+      {
+        timer = millis();
+        msgUsuario.telaFaceNaoReconhecida();
+        Serial.println("Usuario não detectado");
+        // delay(2000);
+        if (millis() - timer > 3000)
+        {
+          estadoAtualSistema = INICIO;
+        }
+      }
+    }
+  }
+
+  else if (estadoAtualSistema == RECONHECIMENTO_FACIAL_PROCESSANDO)
+  {
+    // Aqui você pode buscar o usuário pelo ID recebido e abrir a porta, etc.
+
+    File file = SD.open("/registros.txt", "r");
+    Usuario user = registroUsuario.recuperaUsuario(file, id.toInt(), "", RECONHECIMENTO_FACIAL);
+    file.close();
+    Serial.print("Usuário encontrado: ");
+    Serial.println(user.nome);
+    Serial.print("ID encontrado: ");
+    Serial.println(user.id);
+    if (user.id != -1)
+    {
+      msgUsuario.telaUsuarioEncontrado(user.nome);
+      // Aqui você pode acionar a abertura da porta
+      // pinMode(pinoTranca, HIGH); // Abre a porta
+      delay(3000);
+      estadoAtualSistema = INICIO;
+      // pinMode(pinoTranca, LOW); // FECHA a porta
+    }
+    else
+    {
+      msgUsuario.telaUsuarioNaoCadastrado();
+      delay(3000);
       estadoAtualSistema = INICIO;
     }
   }
@@ -194,41 +275,107 @@ void loop()
   else if (estadoAtualSistema == INSERCAO_ID_USUARIO)
   {
     estadoAnteriorSistema = estadoAtualSistema;
-    // Executa toda hora
+
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
       teclado.armazenaDigito(teclaAtual);
     }
     msgUsuario.desenhaTelaDigiteId(teclado.digitosArmazenados);
 
-    // Transições
     if (teclaAtual == '#')
     {
       id = teclado.digitosArmazenados;
 
-      estadoAtualSistema = INSERCAO_SENHA_USUARIO;
-      teclaAtual = '\0';
-      teclado.limpaDigitosArmazenados();
+      if (id.length() > 0)
+      {
+        estadoAtualSistema = INSERCAO_SENHA_USUARIO;
+        teclaAtual = '\0';
+        teclado.limpaDigitosArmazenados();
+      }
+      else
+      {
+        estadoAtualSistema = ERRO_INSERCAO_ID_USUARIO;
+        teclaAtual = '\0';
+        teclado.limpaDigitosArmazenados();
+      }
     }
+    // else if (teclaAtual == '*')
+    // {
+    //   estadoAtualSistema = INICIO;
+    //   teclado.limpaDigitosArmazenados();
+    //   teclaAtual = '\0';
+    // }
   }
 
+  else if (estadoAtualSistema == ERRO_INSERCAO_ID_USUARIO)
+  {
+    estadoAnteriorSistema = estadoAtualSistema;
+    msgUsuario.telaIdNaoInformado(); // Mensagem avisando para pressionar * ou tentar novamente
+    // timer = millis();
+    if (teclaAtual == '*')
+    {
+      estadoAtualSistema = INICIO;
+      teclado.limpaDigitosArmazenados();
+      teclaAtual = '\0';
+    }
+    else if (teclaAtual == '#') 
+    {
+      estadoAtualSistema = INSERCAO_ID_USUARIO;
+      teclado.limpaDigitosArmazenados();
+      teclaAtual = '\0';
+    }
+  }
   else if (estadoAtualSistema == INSERCAO_SENHA_USUARIO)
   {
     estadoAnteriorSistema = estadoAtualSistema;
-    // Executa toda hora
+
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
       teclado.armazenaDigito(teclaAtual);
     }
     msgUsuario.desenhaTelaDigiteSenha(teclado.digitosArmazenados);
 
-    // Transições
     if (teclaAtual == '#')
     {
       senha = teclado.digitosArmazenados;
-      estadoAtualSistema = AUTENTICACAO;
-      teclaAtual = '\0';
+
+      if (senha.length() > 0)
+      {
+        estadoAtualSistema = AUTENTICACAO;
+        teclaAtual = '\0';
+        teclado.limpaDigitosArmazenados();
+      }
+      else
+      {
+        estadoAtualSistema = ERRO_INSERCAO_SENHA_USUARIO;
+        teclaAtual = '\0';
+        teclado.limpaDigitosArmazenados();
+      }
+    }
+    // else if (teclaAtual == '*')
+    // {
+    //   estadoAtualSistema = INICIO;
+    //   teclado.limpaDigitosArmazenados();
+    //   teclaAtual = '\0';
+    // }
+  }
+
+  else if (estadoAtualSistema == ERRO_INSERCAO_SENHA_USUARIO)
+  {
+    estadoAnteriorSistema = estadoAtualSistema;
+    msgUsuario.telaSenhaNaoInformada(); // Mensagem avisando para pressionar * ou tentar novamente
+    // timer = millis();
+    if (teclaAtual == '*')
+    {
+      estadoAtualSistema = INICIO;
       teclado.limpaDigitosArmazenados();
+      teclaAtual = '\0';
+    }
+    else if (teclaAtual == '#') 
+    {
+      estadoAtualSistema = INSERCAO_SENHA_USUARIO;
+      teclado.limpaDigitosArmazenados();
+      teclaAtual = '\0';
     }
   }
 
@@ -522,10 +669,10 @@ void loop()
       //   // else erro
       // }
       bool primeiraImagemOk = digital.iniciaCriacaoDigital();
-        if (primeiraImagemOk)
-        {
-          estadoAtualSistema = CADASTRO_BIOMETRIA_RETIRE_DEDO;
-        }
+      if (primeiraImagemOk)
+      {
+        estadoAtualSistema = CADASTRO_BIOMETRIA_RETIRE_DEDO;
+      }
     }
   }
   else if (estadoAtualSistema == CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO)
@@ -587,7 +734,7 @@ void loop()
 
     if (millis() - timer > 3000)
     {
-      estadoAtualSistema = CADASTRO_INFORMA_TIPO_USUARIO;
+      estadoAtualSistema = CADASTRO_PREPARAR_PARA_FOTO;
       // tirar foto usuário
     }
   }
@@ -619,8 +766,11 @@ void loop()
 
     if (Serial.available())
     {
-      String resposta = Serial.readString();
-      if (resposta == "foto_ok")
+      String resposta = Serial.readStringUntil('\n'); // Lê até o \n
+      Serial.print("Recebido pela serial: ");
+      Serial.println(resposta); // debug
+      resposta.trim();
+      if (resposta == "cadastro_finalizado")
       {
         estadoAtualSistema = CADASTRO_INFORMA_TIPO_USUARIO;
       }

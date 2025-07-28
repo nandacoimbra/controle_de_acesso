@@ -18,11 +18,45 @@ void MensagemUsuario::telaMenuInicial()
     String tela = "Controle de Acesso\n";
 }
 
+void MensagemUsuario::telaAguardandoReconhecimentoFacial()
+{
+    String tela = "Aguardando reconhecimento facial...\n";
+    tela += "Posicione o rosto corretamente\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaFaceNaoReconhecida()
+{
+    String tela = "Rosto nao reconhecido\n";
+    tela += "Pressione # para tentar novamente\n";
+    tela += "Pressione * para retornar ao Menu\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
 void MensagemUsuario::desenhaTelaDigiteId(String digitos)
 {
     String tela = "Digite o ID\n";
     tela += "ID:" + digitos + "\n";
     tela += "Pressione # \n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaIdNaoInformado()
+{
+    String tela = "ID nao informado\n";
+    tela += "Pressione # para tentar novamente\n";
+    tela += "Pressione * para retornar ao Menu\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaSenhaNaoInformada()
+{
+    String tela = "Senha nao informada\n";
+    tela += "Pressione # para tentar novamente\n";
+    tela += "Pressione * para retornar ao Menu\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }

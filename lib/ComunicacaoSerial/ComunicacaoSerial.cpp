@@ -10,3 +10,8 @@ void ComunicacaoSerial::iniciarReconhecimentoFacial()
 {
     Serial.println("iniciar_reconhecimento_facial");
 }
+
+void ComunicacaoSerial::removerUsuario(String id)
+{
+     Serial.println("remover_usuario|" + id);
+}

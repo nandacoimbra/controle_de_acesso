@@ -130,16 +130,21 @@ void setup()
   }
   // servidor.iniciar(); // Inicia o servidor
   //                     // Aguarda conexão
-
-  File file = SD.open("/registros.txt", "r");
-  String stringEncontrada = registroUsuario.buscaIdNoArquivo(file, 2500);
+  File file = SD.open("/registros.txt");
+  while (file.available())
+  {
+    Serial.write(file.read());
+  }
   file.close();
-  Serial.println(stringEncontrada);
-  Usuario usuario = registroUsuario.transformaTextoEmUsuario(stringEncontrada);
-  Serial.println("Nome: " + usuario.nome);
-  Serial.printf("id: %d\n", usuario.id);
-  Serial.printf("tipo: %d\n", usuario.tipo);
-  Serial.println("senha: " + usuario.senha);
+  // File file = SD.open("/registros.txt", "r");
+  // String stringEncontrada = registroUsuario.buscaIdNoArquivo(file, 2500);
+  // file.close();
+  // Serial.println(stringEncontrada);
+  // Usuario usuario = registroUsuario.transformaTextoEmUsuario(stringEncontrada);
+  // Serial.println("Nome: " + usuario.nome);
+  // Serial.printf("id: %d\n", usuario.id);
+  // Serial.printf("tipo: %d\n", usuario.tipo);
+  // Serial.println("senha: " + usuario.senha);
   pinMode(pinoTranca, OUTPUT);
 }
 
@@ -318,7 +323,7 @@ void loop()
       teclado.limpaDigitosArmazenados();
       teclaAtual = '\0';
     }
-    else if (teclaAtual == '#') 
+    else if (teclaAtual == '#')
     {
       estadoAtualSistema = INSERCAO_ID_USUARIO;
       teclado.limpaDigitosArmazenados();
@@ -371,7 +376,7 @@ void loop()
       teclado.limpaDigitosArmazenados();
       teclaAtual = '\0';
     }
-    else if (teclaAtual == '#') 
+    else if (teclaAtual == '#')
     {
       estadoAtualSistema = INSERCAO_SENHA_USUARIO;
       teclado.limpaDigitosArmazenados();
@@ -469,39 +474,39 @@ void loop()
     }
   }
 
-  else if (estadoAtualSistema == REMOVE_USUARIO_CONFIRMA_ID)
-  {
-    estadoAnteriorSistema = estadoAtualSistema;
-    // Executa toda hora
-    if (teclaAtual != '\0' && teclaAtual != '#')
-    {
-      teclado.armazenaDigito(teclaAtual);
-    }
-    msgUsuario.telaConfirmaRemocaoUsuario(teclado.digitosArmazenados);
+  // else if (estadoAtualSistema == REMOVE_USUARIO_CONFIRMA_ID)
+  // {
+  //   estadoAnteriorSistema = estadoAtualSistema;
+  //   // Executa toda hora
+  //   if (teclaAtual != '\0' && teclaAtual != '#')
+  //   {
+  //     teclado.armazenaDigito(teclaAtual);
+  //   }
+  //   msgUsuario.telaConfirmaRemocaoUsuario(teclado.digitosArmazenados);
 
-    // Transições
-    if (teclaAtual == '#')
-    {
-      id = teclado.digitosArmazenados;
-      estadoAtualSistema = REMOVENDO_USUARIO;
-      teclaAtual = '\0';
-      teclado.limpaDigitosArmazenados();
-    }
-  }
+  //   // Transições
+  //   if (teclaAtual == '#')
+  //   {
+  //     id = teclado.digitosArmazenados;
+  //     estadoAtualSistema = REMOVENDO_USUARIO;
+  //     teclaAtual = '\0';
+  //     teclado.limpaDigitosArmazenados();
+  //   }
+  // }
 
-  else if (estadoAtualSistema == REMOVENDO_USUARIO)
-  {
-    estadoAnteriorSistema = estadoAtualSistema;
-    File file = SD.open("/registros.txt", "r");
-    File fileTemp = SD.open("/temp.txt", "w");
-    Usuario usuarioRemovido = registroUsuario.recuperaUsuario(file, id.toInt(), senha, TECLADO);
+  // else if (estadoAtualSistema == REMOVENDO_USUARIO)
+  // {
+  //   estadoAnteriorSistema = estadoAtualSistema;
+  //   File file = SD.open("/registros.txt", "r");
+  //   File fileTemp = SD.open("/temp.txt", "w");
+  //   Usuario usuarioRemovido = registroUsuario.recuperaUsuario(file, id.toInt(), senha, TECLADO);
 
-    if (usuarioRemovido.id != -1)
-    {
-      usuarioRemovido.idBiometria = -1; // remove a biometria do usuario removido
-      registroUsuario.removeUsuarioSdCard(file, fileTemp, usuarioRemovido);
-    }
-  }
+  //   if (usuarioRemovido.id != -1)
+  //   {
+  //     usuarioRemovido.idBiometria = -1; // remove a biometria do usuario removido
+  //     registroUsuario.removeUsuarioSdCard(file, fileTemp, usuarioRemovido);
+  //   }
+  // }
   else if (estadoAtualSistema == CADASTRO_DIGITANDO_NOME)
   {
     if (estadoAtualSistema != estadoAnteriorSistema)
@@ -849,47 +854,58 @@ void loop()
     if (teclaAtual == '#')
     {
       id = teclado.digitosArmazenados;
-
       estadoAtualSistema = REMOVE_USUARIO_CONFIRMA_ID;
       teclaAtual = '\0';
       teclado.limpaDigitosArmazenados();
+      Serial.println("ID informado: " + id);
     }
   }
 
   else if (estadoAtualSistema == REMOVE_USUARIO_CONFIRMA_ID)
   {
+
     if (estadoAnteriorSistema != estadoAtualSistema)
     {
-      timer = millis();
+      Serial.println("Mudou para estado CONFIRMA ID");
+      estadoAnteriorSistema = estadoAtualSistema;
+
       File file = SD.open("/registros.txt", "r");
       stringEncontrada = registroUsuario.buscaIdNoArquivo(file, id.toInt());
+      Serial.println("String encontrada: " + stringEncontrada);
+
       if (stringEncontrada != "")
       {
         Usuario user = registroUsuario.transformaTextoEmUsuario(stringEncontrada);
-        file.close();
-        estadoAnteriorSistema = estadoAtualSistema;
+        Serial.println("Usuario encontrado: " + user.nome);
         nomeUsuario = user.nome;
+        msgUsuario.telaConfirmaRemocaoUsuario(nomeUsuario);
       }
       else
       {
-        estadoAnteriorSistema = estadoAtualSistema;
         estadoAtualSistema = REMOVE_USUARIO_ID_NAO_ENCONTRADO;
+        teclaAtual = '\0';
+        teclado.limpaDigitosArmazenados();
+        file.close();
+        return;
       }
+      file.close();
     }
-    // se encontrar, pede confirmação para remover
-    msgUsuario.telaConfirmaRemocaoUsuario(nomeUsuario);
 
-    // se confirmar, remove
-    if (teclaAtual == '#')
+    if (teclaAtual != '\0') // só reage se houver tecla
     {
-      estadoAtualSistema = REMOVENDO_USUARIO;
+      if (teclaAtual == '#')
+      {
+        Serial.println("Confirmou com #");
+        estadoAtualSistema = REMOVENDO_USUARIO;
+      }
+      else if (teclaAtual == '*')
+      {
+        Serial.println("Cancelou com *");
+        estadoAtualSistema = MENU_USUARIO_MASTER;
+      }
+
       teclaAtual = '\0';
       teclado.limpaDigitosArmazenados();
-    }
-    else if (teclaAtual == '*')
-    {
-      // se não confirmar, volta para o inicio
-      estadoAtualSistema = MENU_USUARIO_MASTER;
     }
   }
 
@@ -916,6 +932,7 @@ void loop()
   {
     if (estadoAnteriorSistema != estadoAtualSistema)
     {
+      Serial.println("ESTADO REMOVENDO USUARIO");
       timer = millis();
       File file = SD.open("/registros.txt", "r");
       if (!file)
@@ -941,16 +958,8 @@ void loop()
         Serial.println(usuarioRemovido);
         SD.remove("/registros.txt");
         SD.rename("/registrosTemp.txt", "/registros.txt");
-
-        // bool arquivoRenomeado = SD.rename("/registros.txt", "/registrosTemp.txt");
-
-        // if (arquivoRenomeado)
-        // {
-        //   serial
-        //   SD.remove("/registros.txt");
-        // }
-        // SD.rename("/registrosTemp.txt", "/registros.txt");
         digital.apagarDigital(registroUsuario.transformaTextoEmUsuario(stringEncontrada).idBiometria);
+        comunicacaoSerial.removerUsuario(String(registroUsuario.transformaTextoEmUsuario(stringEncontrada).id));
         msgUsuario.telaUsuarioRemovidoComSucesso();
         contaArquivosRemovidos++;
 

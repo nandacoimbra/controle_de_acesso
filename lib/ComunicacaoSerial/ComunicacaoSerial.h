@@ -14,6 +14,7 @@ public:
     // métodos
     void tirarFotos(String id, String nomeUsuario);
     void iniciarReconhecimentoFacial();
+    void removerUsuario(String id);
 };
 
 #endif

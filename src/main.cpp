@@ -9,6 +9,7 @@
 #include "ComunicacaoSerial.h"
 // sd card
 #include "FS.h"
+#include "SPIFFS.h"
 #include "SD.h"
 #include "SPI.h"
 // servidor
@@ -113,6 +114,68 @@ void resetaValoresGlobais()
   usuarioRemovido = false;
 }
 
+void listarArquivosSPIFFS()
+{
+  Serial.println("Arquivos no SPIFFS:");
+  File root = SPIFFS.open("/");
+  File file = root.openNextFile();
+  while (file)
+  {
+    Serial.print("  ");
+    Serial.print(file.name());
+    Serial.print("  (");
+    Serial.print(file.size());
+    Serial.println(" bytes)");
+    file = root.openNextFile();
+  }
+}
+
+void backupUsuarios()
+{
+  File sdFile = SD.open("/registros.txt", FILE_READ);
+  if (!sdFile)
+  {
+    Serial.println("Não foi possível abrir registros.txt no SD");
+    return;
+  }
+
+  File spiffsFile = SPIFFS.open("/backup_registros.txt", FILE_WRITE);
+  if (!spiffsFile)
+  {
+    Serial.println("Não foi possível criar backup_registros.txt no SPIFFS");
+    sdFile.close();
+    return;
+  }
+
+  Serial.println("Iniciando backup dos usuários...");
+  while (sdFile.available())
+  {
+    spiffsFile.write(sdFile.read());
+  }
+
+  sdFile.close();
+  spiffsFile.close();
+
+  Serial.println("Backup concluído com sucesso!");
+}
+
+void imprimirBackup()
+{
+  File file = SPIFFS.open("/backup_registros.txt", FILE_READ);
+  if (!file)
+  {
+    Serial.println("Erro ao abrir backup_registros.txt");
+    return;
+  }
+
+  Serial.println("Conteúdo do backup_registros.txt no SPIFFS:");
+  while (file.available())
+  {
+    Serial.write(file.read());
+  }
+  file.close();
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -128,24 +191,32 @@ void setup()
     Serial.println("Card Mount Failed");
     return;
   }
-  // servidor.iniciar(); // Inicia o servidor
-  //                     // Aguarda conexão
-  File file = SD.open("/registros.txt");
-  while (file.available())
+
+  if (!SPIFFS.begin(true))
   {
-    Serial.write(file.read());
+    Serial.println("Erro ao montar o SPIFFS!");
+    return;
   }
-  file.close();
-  // File file = SD.open("/registros.txt", "r");
-  // String stringEncontrada = registroUsuario.buscaIdNoArquivo(file, 2500);
-  // file.close();
-  // Serial.println(stringEncontrada);
-  // Usuario usuario = registroUsuario.transformaTextoEmUsuario(stringEncontrada);
-  // Serial.println("Nome: " + usuario.nome);
-  // Serial.printf("id: %d\n", usuario.id);
-  // Serial.printf("tipo: %d\n", usuario.tipo);
-  // Serial.println("senha: " + usuario.senha);
-  pinMode(pinoTranca, OUTPUT);
+  Serial.println("SPIFFS montado com sucesso!");
+
+// servidor.iniciar(); // Inicia o servidor
+//                     // Aguarda conexão
+
+// File file = SD.open("/registros.txt", "r");
+// String stringEncontrada = registroUsuario.buscaIdNoArquivo(file, 2500);
+// file.close();
+// Serial.println(stringEncontrada);
+// Usuario usuario = registroUsuario.transformaTextoEmUsuario(stringEncontrada);
+// Serial.println("Nome: " + usuario.nome);
+// Serial.printf("id: %d\n", usuario.id);
+// Serial.printf("tipo: %d\n", usuario.tipo);
+// Serial.println("senha: " + usuario.senha);
+pinMode(pinoTranca, OUTPUT);
+// Faz o backup
+backupUsuarios();
+
+// Mostra o que foi salvo no SPIFFS
+imprimirBackup();
 }
 
 void loop()
@@ -383,7 +454,7 @@ void loop()
       teclaAtual = '\0';
     }
   }
-
+  // mudar armazenamento
   else if (estadoAtualSistema == AUTENTICACAO)
   {
     if (estadoAnteriorSistema != estadoAtualSistema)
@@ -451,26 +522,6 @@ void loop()
     {
       estadoAtualSistema = CADASTRO_PREPARAR_PARA_FOTO;
       teclaAtual = '\0';
-    }
-  }
-
-  else if (estadoAtualSistema == REMOVE_USUARIO_INFORME_ID)
-  {
-    estadoAnteriorSistema = estadoAtualSistema;
-    // Executa toda hora
-    if (teclaAtual != '\0' && teclaAtual != '#')
-    {
-      teclado.armazenaDigito(teclaAtual);
-    }
-    msgUsuario.telaDigiteIdRemoveUsuario(teclado.digitosArmazenados);
-
-    // Transições
-    if (teclaAtual == '#')
-    {
-      id = teclado.digitosArmazenados;
-      estadoAtualSistema = REMOVE_USUARIO_CONFIRMA_ID;
-      teclaAtual = '\0';
-      teclado.limpaDigitosArmazenados();
     }
   }
 
@@ -744,8 +795,6 @@ void loop()
     }
   }
 
-  // aqui o usuario vai tirar a foto (ainda em fase de testes)
-
   else if (estadoAtualSistema == CADASTRO_PREPARAR_PARA_FOTO)
   {
     if (estadoAtualSistema != estadoAnteriorSistema)
@@ -836,19 +885,40 @@ void loop()
       estadoAtualSistema = INICIO;
     }
   }
+  // else if (estadoAtualSistema == REMOVE_USUARIO_INFORME_ID)
+  // {
+  //   if (estadoAtualSistema != estadoAnteriorSistema)
+  //   {
+  //     estadoAnteriorSistema = estadoAtualSistema;
+  //   }
+  //   // Executa toda hora
+  //   if (teclaAtual != '\0' && teclaAtual != '#')
+  //   {
+  //     teclado.armazenaDigito(teclaAtual);
+  //   }
+
+  //   msgUsuario.desenhaTelaDigiteId(teclado.digitosArmazenados);
+
+  //   // Transições
+  //   if (teclaAtual == '#')
+  //   {
+  //     id = teclado.digitosArmazenados;
+  //     estadoAtualSistema = REMOVE_USUARIO_CONFIRMA_ID;
+  //     teclaAtual = '\0';
+  //     teclado.limpaDigitosArmazenados();
+  //     Serial.println("ID informado: " + id);
+  //   }
+  // }
+
   else if (estadoAtualSistema == REMOVE_USUARIO_INFORME_ID)
   {
-    if (estadoAtualSistema != estadoAnteriorSistema)
-    {
-      estadoAnteriorSistema = estadoAtualSistema;
-    }
+    estadoAnteriorSistema = estadoAtualSistema;
     // Executa toda hora
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
       teclado.armazenaDigito(teclaAtual);
     }
-
-    msgUsuario.desenhaTelaDigiteId(teclado.digitosArmazenados);
+    msgUsuario.telaDigiteIdRemoveUsuario(teclado.digitosArmazenados);
 
     // Transições
     if (teclaAtual == '#')
@@ -857,7 +927,6 @@ void loop()
       estadoAtualSistema = REMOVE_USUARIO_CONFIRMA_ID;
       teclaAtual = '\0';
       teclado.limpaDigitosArmazenados();
-      Serial.println("ID informado: " + id);
     }
   }
 

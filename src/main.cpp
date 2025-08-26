@@ -139,10 +139,10 @@ void backupUsuarios()
     return;
   }
 
-  File spiffsFile = SPIFFS.open("/backup_registros.txt", FILE_WRITE);
+  File spiffsFile = SPIFFS.open("/usuarios.txt", FILE_WRITE);
   if (!spiffsFile)
   {
-    Serial.println("Não foi possível criar backup_registros.txt no SPIFFS");
+    Serial.println("Não foi possível criar usuarios.txt no SPIFFS");
     sdFile.close();
     return;
   }
@@ -161,14 +161,14 @@ void backupUsuarios()
 
 void imprimirBackup()
 {
-  File file = SPIFFS.open("/backup_registros.txt", FILE_READ);
+  File file = SPIFFS.open("/usuarios.txt", FILE_READ);
   if (!file)
   {
-    Serial.println("Erro ao abrir backup_registros.txt");
+    Serial.println("Erro ao abrir usuarios.txt");
     return;
   }
 
-  Serial.println("Conteúdo do backup_registros.txt no SPIFFS:");
+  Serial.println("Conteúdo do usuarios.txt no SPIFFS:");
   while (file.available())
   {
     Serial.write(file.read());

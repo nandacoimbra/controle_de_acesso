@@ -130,45 +130,47 @@ void listarArquivosSPIFFS()
   }
 }
 
+
+
 void backupUsuarios()
 {
-  File sdFile = SD.open("/registros.txt", FILE_READ);
-  if (!sdFile)
-  {
-    Serial.println("Não foi possível abrir registros.txt no SD");
-    return;
-  }
-
-  File spiffsFile = SPIFFS.open("/usuarios.txt", FILE_WRITE);
+  File spiffsFile = SPIFFS.open("/usuarios.txt", FILE_READ);
   if (!spiffsFile)
   {
-    Serial.println("Não foi possível criar usuarios.txt no SPIFFS");
-    sdFile.close();
+    Serial.println("Não foi possível abrir usuarios.txt no SPIFFS");
     return;
   }
 
-  Serial.println("Iniciando backup dos usuários...");
-  while (sdFile.available())
+  File sdFile = SD.open("/usuarios_backup.txt", FILE_WRITE);
+  if (!sdFile)
   {
-    spiffsFile.write(sdFile.read());
+    Serial.println("Não foi possível criar usuarios_backup.txt no SD");
+    spiffsFile.close();
+    return;
   }
 
-  sdFile.close();
+  Serial.println("Iniciando backup dos usuários (SPIFFS -> SD)...");
+  while (spiffsFile.available())
+  {
+    sdFile.write(spiffsFile.read());
+  }
+
   spiffsFile.close();
+  sdFile.close();
 
   Serial.println("Backup concluído com sucesso!");
 }
 
 void imprimirBackup()
 {
-  File file = SPIFFS.open("/usuarios.txt", FILE_READ);
+  File file = SD.open("/usuarios_backup.txt", FILE_READ);
   if (!file)
   {
-    Serial.println("Erro ao abrir usuarios.txt");
+    Serial.println("Erro ao abrir usuarios_backup.txt no SD");
     return;
   }
 
-  Serial.println("Conteúdo do usuarios.txt no SPIFFS:");
+  Serial.println("Conteúdo do usuarios_backup.txt no SD:");
   while (file.available())
   {
     Serial.write(file.read());
@@ -199,24 +201,24 @@ void setup()
   }
   Serial.println("SPIFFS montado com sucesso!");
 
-// servidor.iniciar(); // Inicia o servidor
-//                     // Aguarda conexão
+  // servidor.iniciar(); // Inicia o servidor
+  //                     // Aguarda conexão
 
-// File file = SD.open("/registros.txt", "r");
-// String stringEncontrada = registroUsuario.buscaIdNoArquivo(file, 2500);
-// file.close();
-// Serial.println(stringEncontrada);
-// Usuario usuario = registroUsuario.transformaTextoEmUsuario(stringEncontrada);
-// Serial.println("Nome: " + usuario.nome);
-// Serial.printf("id: %d\n", usuario.id);
-// Serial.printf("tipo: %d\n", usuario.tipo);
-// Serial.println("senha: " + usuario.senha);
-pinMode(pinoTranca, OUTPUT);
-// Faz o backup
-backupUsuarios();
+  // File file = SD.open("/registros.txt", "r");
+  // String stringEncontrada = registroUsuario.buscaIdNoArquivo(file, 2500);
+  // file.close();
+  // Serial.println(stringEncontrada);
+  // Usuario usuario = registroUsuario.transformaTextoEmUsuario(stringEncontrada);
+  // Serial.println("Nome: " + usuario.nome);
+  // Serial.printf("id: %d\n", usuario.id);
+  // Serial.printf("tipo: %d\n", usuario.tipo);
+  // Serial.println("senha: " + usuario.senha);
+  pinMode(pinoTranca, OUTPUT);
+  // Faz o backup
+  backupUsuarios();
 
-// Mostra o que foi salvo no SPIFFS
-imprimirBackup();
+  // Mostra o que foi salvo no SPIFFS
+  imprimirBackup();
 }
 
 void loop()
@@ -324,7 +326,8 @@ void loop()
   {
     // Aqui você pode buscar o usuário pelo ID recebido e abrir a porta, etc.
 
-    File file = SD.open("/registros.txt", "r");
+    // File file = SD.open("/registros.txt", "r");
+    File file = SPIFFS.open("/usuarios.txt", "r");
     Usuario user = registroUsuario.recuperaUsuario(file, id.toInt(), "", RECONHECIMENTO_FACIAL);
     file.close();
     Serial.print("Usuário encontrado: ");
@@ -462,7 +465,8 @@ void loop()
       timer = millis();
       estadoAnteriorSistema = estadoAtualSistema;
     }
-    File file = SD.open("/registros.txt", "r");
+    // File file = SD.open("/registros.txt", "r");
+    File file = SPIFFS.open("/usuarios.txt", "r");
     Usuario user = registroUsuario.recuperaUsuario(file, id.toInt(), senha, TECLADO);
     file.close();
     if (user.id == -1)
@@ -630,7 +634,8 @@ void loop()
   {
     if (estadoAtualSistema != estadoAnteriorSistema)
     {
-      File file = SD.open("/registros.txt", "r");
+      // File file = SD.open("/registros.txt", "r");
+      File file = SPIFFS.open("/usuarios.txt", "r");
       idGerado = registroUsuario.buscaProximoIdDisponivel(file);
       file.close();
       // atualiza o estado
@@ -768,7 +773,8 @@ void loop()
     }
     if (digital.leitorTocado())
     {
-      File file = SD.open("/registros.txt", "r");
+      // File file = SD.open("/registros.txt", "r");
+      File file = SPIFFS.open("/usuarios.txt", "r");
       idBiometria = registroUsuario.buscaIdBiometriaDisponivel(file);
       file.close();
       if (digital.finalizaCriacaoDigital(idBiometria))
@@ -851,7 +857,8 @@ void loop()
     if (estadoAtualSistema != estadoAnteriorSistema)
     {
       // abre o arquivo no modo de escrita "append", que escreve no final do arquivo e mantem o conteudo
-      File file = SD.open("/registros.txt", "a");
+      // File file = SD.open("/registros.txt", "a");
+      File file = SPIFFS.open("/usuarios.txt", "a");
       // chama a funcao que salva no SD card
       Usuario usuario;
       usuario.id = idGerado;
@@ -938,7 +945,8 @@ void loop()
       Serial.println("Mudou para estado CONFIRMA ID");
       estadoAnteriorSistema = estadoAtualSistema;
 
-      File file = SD.open("/registros.txt", "r");
+      // File file = SD.open("/registros.txt", "r");
+      File file = SPIFFS.open("/usuarios.txt", "r");
       stringEncontrada = registroUsuario.buscaIdNoArquivo(file, id.toInt());
       Serial.println("String encontrada: " + stringEncontrada);
 
@@ -1003,16 +1011,17 @@ void loop()
     {
       Serial.println("ESTADO REMOVENDO USUARIO");
       timer = millis();
-      File file = SD.open("/registros.txt", "r");
+      // File file = SD.open("/registros.txt", "r");
+      File file = SPIFFS.open("/usuarios.txt", "r");
       if (!file)
       {
-        Serial.println("Erro ao abrir registros.txt para leitura!");
+        Serial.println("Erro ao abrir usuarios.txt para leitura!");
         return;
       }
-      File fileTemp = SD.open("/registrosTemp.txt", "w");
+      File fileTemp = SD.open("/usuariosTemp.txt", "w");
       if (!fileTemp)
       {
-        Serial.println("Erro ao criar registrosTemp.txt!");
+        Serial.println("Erro ao criar usuariosTemp.txt!");
         // file.close();
         return;
       }
@@ -1025,8 +1034,8 @@ void loop()
       {
         Serial.println("Usuario removido com sucesso!:");
         Serial.println(usuarioRemovido);
-        SD.remove("/registros.txt");
-        SD.rename("/registrosTemp.txt", "/registros.txt");
+        SD.remove("/usuarios.txt");
+        SD.rename("/usuariosTemp.txt", "/usuarios.txt");
         digital.apagarDigital(registroUsuario.transformaTextoEmUsuario(stringEncontrada).idBiometria);
         comunicacaoSerial.removerUsuario(String(registroUsuario.transformaTextoEmUsuario(stringEncontrada).id));
         msgUsuario.telaUsuarioRemovidoComSucesso();

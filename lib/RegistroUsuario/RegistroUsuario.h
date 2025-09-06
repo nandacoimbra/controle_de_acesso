@@ -39,4 +39,5 @@ public:
     int buscaIdBiometriaDisponivel(Stream &stream);
     bool salvaUsuarioSdCard(Stream &stream, Usuario usuario);
     bool removeUsuarioSdCard(Stream &stream, Stream &streamTemp, Usuario usuario);
+    void registrarLogEntrada(Stream &stream, int idUsuario, String nomeUsuario, String metodoAutenticacao);
 };

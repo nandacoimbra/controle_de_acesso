@@ -135,6 +135,23 @@ bool RegistroUsuario::removeUsuarioSdCard(Stream &stream, Stream &streamTemp, Us
     return false;
 }
 
+void RegistroUsuario::registrarLogEntrada(Stream &stream, int idUsuario, String nomeUsuario, String metodoAutenticacao)
+{
+    String dataHora;
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+        char buffer[32];
+        strftime(buffer, sizeof(buffer), "%d/%m/%Y %H:%M:%S", &timeinfo);
+        dataHora = String(buffer);
+    } else {
+        dataHora = "sem_data";
+    }
+
+    String log = dataHora + ",id:" + String(idUsuario) + ",nome:" + nomeUsuario + ",metodo:" + metodoAutenticacao + ";\n";
+    stream.print(log);
+   
+}
+
 int RegistroUsuario::buscaProximoIdDisponivel(Stream &stream)
 {
     int maiorId = 0;

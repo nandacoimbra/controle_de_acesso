@@ -6,12 +6,26 @@ MensagemUsuario::MensagemUsuario(TelaSaida &tela1, TelaSaida &tela2) : telaPrinc
 
 void MensagemUsuario::telaBemVindo()
 {
-    String tela = "Sistema de Controle de Acesso\n";
+    String tela = "CONTROLE DE ACESSO\n";
     tela += "CEFET Leopoldina\n";
     tela += "Bem Vindo!\n";
-    tela += "Pressione #\n";
+    tela += "Pressione C para\n";
+    tela += "reconhecimento facial\n";
+    tela += "Pressione # para\n";
+    tela += "login via teclado\n";
     telaPrincipal.desenhaTexto(tela);
 }
+// void MensagemUsuario::telaBemVindo()
+// {
+//     String tela = "CONTROLE DE ACESSO\n";
+//     tela += "CEFET Leopoldina\n";
+//     tela += "Bem Vindo!\n";
+//     tela += "Pressione:\n";
+//     tela += "C -> reconhecimento facial\n";
+//     tela += "# -> login via teclado\n";
+//     telaPrincipal.desenhaTexto(tela);
+// }
+
 
 void MensagemUsuario::telaMenuInicial()
 {
@@ -82,8 +96,8 @@ void MensagemUsuario::telaRemoveUsuarioIdNaoEncontrado()
 void MensagemUsuario::telaConfirmaRemocaoUsuario(String nomeUsuario)
 {
     String tela = "Confirma remocao do usuario" + nomeUsuario + "?\n";
-    tela += "Pressione # para SIM\n";
-    tela += "Pressione * para NAO\n";
+    tela += "Pressione # para sim\n";
+    tela += "Pressione * para nao\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }
@@ -125,6 +139,7 @@ void MensagemUsuario::telaUsuarioNaoCadastrado()
 void MensagemUsuario::telaUsuarioEncontrado(String nome)
 {
     String tela = "Bem vindo, " + nome + "!";
+    tela += "Abrindo a porta\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }
@@ -172,7 +187,7 @@ void MensagemUsuario::telaCadastroDigiteSenha(String digitos, int id)
     }
 
     String tela = "ID gerado: " + String(id) + "\n";
-    tela += "Informe uma senha numerica\n";
+    tela += "Informe uma senha\n";
     tela += "Senha:" + digitos + "\n";
     tela += "Pressione # \n";
     telaPrincipal.desenhaTexto(tela);
@@ -211,7 +226,7 @@ void MensagemUsuario::telaUsuarioCadastrado()
 
 void MensagemUsuario::telaCadastroBiometriaEncosteDedo()
 {
-    String tela = "=Cadastro biometria=\n";
+    String tela = "Cadastro da biometria\n";
     tela += "Encoste o dedo no sensor\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
@@ -219,8 +234,8 @@ void MensagemUsuario::telaCadastroBiometriaEncosteDedo()
 
 void MensagemUsuario::telaCadastroBiometriaEncosteDedoNovamente()
 {
-    String tela = "=Cadastro biometria=\n";
-    tela += "Encoste o MESMO dedo novamente\n";
+    String tela = "Cadastro da biometria\n";
+    tela += "Encoste novamente o mesmo dedo no sensor\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }

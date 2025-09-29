@@ -29,6 +29,23 @@ void Display::displayConfig()
     display.setCursor(0, 0);
 }
 
+
+void Display::displayPrint(String mensagem)
+{
+    displayConfig();
+    display.println(mensagem);
+    display.display();
+}
+
+void Display::desenhaTexto(String texto){
+    displayConfig();
+    display.print(texto);
+    display.display();
+}
+
+
+// TESTE
+
 void Display::telaInicial()
 {
     displayConfig();
@@ -69,18 +86,5 @@ void Display::digitarSenha(void)
     display.println("Digite a senha: ");
     display.println("Senha: ");
     display.println("Pressione #");
-    display.display();
-}
-
-void Display::displayPrint(String mensagem)
-{
-    displayConfig();
-    display.println(mensagem);
-    display.display();
-}
-
-void Display::desenhaTexto(String texto){
-    displayConfig();
-    display.print(texto);
     display.display();
 }

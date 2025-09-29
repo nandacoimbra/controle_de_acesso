@@ -24,12 +24,12 @@ class Display : public TelaSaida
     Display();
     void displaySetup(void);
     void displayConfig(void);
-    void telaInicial(void);
-    void digitarId(void);
-    void digitarSenha(void);
-    void displayPrint (String);
-    void menuTeclado(void);
+    void displayPrint (String); 
     void desenhaTexto(String texto);
+    void telaInicial(void); //teste
+    void digitarId(void); //teste
+    void digitarSenha(void); //teste
+    void menuTeclado(void); //teste
 };
 
 #endif

@@ -1,12 +1,12 @@
 #include <Arduino.h>
-#include "Biometria.h"
-#include "Display.h"
-#include "Comandos.h"
-#include "Teclado.h"
-#include "MensagemUsuario.h"
-#include "TelaSerial.h"
-#include "RegistroUsuario.h"
-#include "ComunicacaoSerial.h"
+#include "Biometria.h"         // biblioteca para o sensor biométrico
+#include "Display.h"           // biblioteca para o display OLED
+#include "Comandos.h"          // biblioteca para os comandos recebidos via serial
+#include "Teclado.h"           // biblioteca para o teclado matricial
+#include "MensagemUsuario.h"   // biblioteca para as mensagens exibidas ao usuário (display e serial)
+#include "TelaSerial.h"        // biblioteca para a "tela" serial
+#include "RegistroUsuario.h"   // biblioteca para o registro dos usuários
+#include "ComunicacaoSerial.h" // biblioteca para a comunicação serial com outro dispositivo
 // sd card e spiffs
 #include "FS.h"
 #include "SPIFFS.h"
@@ -15,8 +15,9 @@
 // servidor
 #include "Servidor.h"
 #include "servidor.h"
-
+// backup de usuarios
 #include <Backup.h>
+// wifi
 #include <WiFi.h>
 
 #define SDA_PIN 22
@@ -62,6 +63,7 @@ enum Estado
 
 };
 
+// instancias dos objetos
 Display displayOled;
 Biometria digital;
 Teclado teclado;
@@ -76,32 +78,28 @@ int estadoAtualSistema = INICIO;
 int estadoAnteriorSistema = INVALIDO;
 int contaArquivosRemovidos = 0;
 
-char ultimaTecla = '\0';        // Variável para armazenar a última tecla pressionada
-char ultimaTeclaNaoNula = '\0'; // Variável para armazenar a última tecla pressionada que não é nula
-char letraAtual = '\0';         // Variável para armazenar a letra atual para digitacao do nome
-String nomeUsuario;             // nome do usuario
-int contadorLetras = 0;         // contador de letras digitadas
-String id;                      // id usado na autenticacao
-int idGerado;                   // id gerado para um novo usuario
-int idBiometria;                // idBiometria gerado para um novo usuario
-String senha;
-String confirmaSenha;
-TipoUsuario tipoUsuario;
-String stringEncontrada;
-Backup backup;
-bool usuarioRemovido = false;
-bool emCadastro = false;
-bool logRegistrado = false;
-
-long timer = 0;
-
+char ultimaTecla = '\0';            // Variável para armazenar a última tecla pressionada
+char ultimaTeclaNaoNula = '\0';     // Variável para armazenar a última tecla pressionada que não é nula
+char letraAtual = '\0';             // Variável para armazenar a letra atual para digitacao do nome
+String nomeUsuario;                 // nome do usuario
+int contadorLetras = 0;             // contador de letras digitadas
+String id;                          // id usado na autenticacao
+int idGerado;                       // id gerado para um novo usuario
+int idBiometria;                    // idBiometria gerado para um novo usuario
+String senha;                       // senha do usuario
+String confirmaSenha;               // confirma senha do usuario
+TipoUsuario tipoUsuario;            // tipo do usuario
+String stringEncontrada;            // string encontrada na busca
+Backup backup;                      // objeto para fazer backup dos usuarios do SPIFFS para o SD card
+bool usuarioRemovido = false;       // flag para indicar se o usuário foi removido
+bool emCadastro = false;            // flag para indicar se o sistema está em modo de cadastro
+bool logRegistrado = false;         // flag para indicar se o log de entrada foi registrado
+long timer = 0;                     // variável para controlar o tempo de espera em alguns estados
 const char *ssid = "House";         // SSID da sua rede Wi-Fi
 const char *senhaWifi = "12345678"; // Senha da rede Wi-Fi
-// const char *ssid = "Fernanda ";
-// const char *senha_wifi = "02072024api";
-const int pinoTranca = 25; // Pino ligado à fechadura
+const int pinoTranca = 25;          // Pino ligado à fechadura
 
-// Criação do objeto servidor com os dados necessários
+// Criação do objeto servidor
 // Servidor servidor(ssid, senhaWifi, pinoTranca);
 
 // Função para resetar as variáveis globais
@@ -124,7 +122,6 @@ void resetaValoresGlobais()
 
 void setup()
 {
-
   Serial.begin(115200);
   WiFi.begin(ssid, senhaWifi);
   // Conecta-se à rede Wi-Fi
@@ -169,7 +166,7 @@ void setup()
   // Faz o backup de usuários do SPIFFS para o SD card
   backup.backupUsuarios();
 
-  // Mostra o que foi salvo no SD card
+  // Mostra o que foi salvo no SD card (TESTE)
   backup.imprimirBackup();
 
   // Lista os arquivos do SPIFFS (teste)
@@ -243,6 +240,7 @@ void loop()
             registroUsuario.registrarLogEntrada(logFile, userEncontrado.id, userEncontrado.nome, "BIOMETRIA"); // Registrar log de entrada
             logFile.close();
           }
+          
           estadoAtualSistema = USUARIO_ENCONTRADO;
         }
         else
@@ -312,25 +310,19 @@ void loop()
     File file = SPIFFS.open("/usuarios.txt", "r");                                               // Abre o arquivo de usuários
     Usuario user = registroUsuario.recuperaUsuario(file, id.toInt(), "", RECONHECIMENTO_FACIAL); // Busca o usuário pelo ID
     file.close();
-    // Serial.print("Usuário encontrado: ");
-    // Serial.println(user.nome);
-    // Serial.print("ID encontrado: ");
-    // Serial.println(user.id);
     if (user.id != -1)
     {
       msgUsuario.telaUsuarioEncontrado(user.nome);
-      // pinMode(pinoTranca, HIGH); // Abre a porta
-
+      digitalWrite(pinoTranca, HIGH);               // Abre a porta
       File logFile = SPIFFS.open("/logs.txt", "a"); // Abre o arquivo de logs para registrar a entrada
       if (logFile)
       {
         registroUsuario.registrarLogEntrada(logFile, user.id, user.nome, "RECONHECIMENTO_FACIAL"); // Registrar log de entrada
         logFile.close();
       }
-      delay(3000);
-
+      delay(4000);
       estadoAtualSistema = INICIO;
-      // pinMode(pinoTranca, LOW); // FECHA a porta
+      digitalWrite(pinoTranca, LOW); // FECHA a porta
     }
     else
     {
@@ -465,6 +457,9 @@ void loop()
       else
       {
         msgUsuario.telaUsuarioEncontrado(user.nome);
+        digitalWrite(pinoTranca, HIGH); // Abre a porta;
+        delay(4000);
+        digitalWrite(pinoTranca, LOW); // FECHA a porta
         if (millis() - timer > 3000)
         {
           // colocar estado para abrir a porta
@@ -486,7 +481,11 @@ void loop()
     if (teclaAtual == '1')
     {
       // abre porta
-      // pinMode(pinoTranca, HIGH);
+      digitalWrite(pinoTranca, HIGH);
+      delay(4000);
+      digitalWrite(pinoTranca, LOW);
+      estadoAtualSistema = INICIO;
+      teclaAtual = '\0';
     }
     else if (teclaAtual == '2') // cadastro novo usuario
     {
@@ -627,7 +626,7 @@ void loop()
       confirmaSenha = teclado.digitosArmazenados; // armazena senha digitada pela 2 vez
       teclaAtual = '\0';
       teclado.limpaDigitosArmazenados();
-  
+
       if (senha == confirmaSenha) // compara as senhas digitadas
       {
         estadoAtualSistema = CADASTRO_BIOMETRIA_ENCOSTE_DEDO; // se as senhas estiveram iguais, segue p/ o cadastro da biometria
@@ -645,7 +644,7 @@ void loop()
       timer = millis();
       estadoAnteriorSistema = estadoAtualSistema;
     }
-    msgUsuario.telaSenhaIncorreta();     // exibe mensagem de senha incorreta e retorno ao cadastro
+    msgUsuario.telaSenhaIncorreta(); // exibe mensagem de senha incorreta e retorno ao cadastro
 
     if (millis() - timer > 3000) // aguarda 3s para retornar
     {
@@ -665,7 +664,7 @@ void loop()
       }
     }
   }
-  //estado para caso a digital ja esteja cadastrada (não utilizado no momento)
+  // estado para caso a digital ja esteja cadastrada (não utilizado no momento)
   else if (estadoAtualSistema == CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO)
   {
     if (estadoAtualSistema != estadoAnteriorSistema)
@@ -785,8 +784,8 @@ void loop()
     if (estadoAtualSistema != estadoAnteriorSistema)
     {
       File file = SPIFFS.open("/usuarios.txt", "a"); // abre o arquivo no modo de escrita "append", que escreve no final do arquivo e mantem o conteudo
-      Usuario usuario; // cria um objeto usuario
-      usuario.id = idGerado; // atribui os valores ao objeto usuario
+      Usuario usuario;                               // cria um objeto usuario
+      usuario.id = idGerado;                         // atribui os valores ao objeto usuario
       usuario.idBiometria = idBiometria;
       usuario.nome = nomeUsuario;
       usuario.tipo = tipoUsuario;
@@ -841,7 +840,7 @@ void loop()
     if (estadoAnteriorSistema != estadoAtualSistema)
     {
       estadoAnteriorSistema = estadoAtualSistema;
-      File file = SPIFFS.open("/usuarios.txt", "r"); // Abre o arquivo de usuários do SPIFFS
+      File file = SPIFFS.open("/usuarios.txt", "r");                         // Abre o arquivo de usuários do SPIFFS
       stringEncontrada = registroUsuario.buscaIdNoArquivo(file, id.toInt()); // Busca a string do usuário pelo ID
       Serial.println("String encontrada: " + stringEncontrada);
 
@@ -928,11 +927,11 @@ void loop()
       {
         Serial.println("Usuario removido com sucesso!:");
         Serial.println(usuarioRemovido);
-        SPIFFS.remove("/usuarios.txt"); // apaga o arquivo original
-        SPIFFS.rename("/usuariosTemp.txt", "/usuarios.txt"); // renomeia o arquivo temporario para o nome original
+        SPIFFS.remove("/usuarios.txt");                                                                // apaga o arquivo original
+        SPIFFS.rename("/usuariosTemp.txt", "/usuarios.txt");                                           // renomeia o arquivo temporario para o nome original
         digital.apagarDigital(registroUsuario.transformaTextoEmUsuario(stringEncontrada).idBiometria); // apaga a digital do usuario no sensor
         // Envia comando via serial para a aplicação python remover o encoding facial
-        comunicacaoSerial.removerUsuario(String(registroUsuario.transformaTextoEmUsuario(stringEncontrada).id)); 
+        comunicacaoSerial.removerUsuario(String(registroUsuario.transformaTextoEmUsuario(stringEncontrada).id));
         msgUsuario.telaUsuarioRemovidoComSucesso();
         contaArquivosRemovidos++;
         estadoAtualSistema = USUARIO_REMOVIDO_COM_SUCESSO;
@@ -978,10 +977,14 @@ void loop()
       msgUsuario.telaMsgUsuarioEncontrado();
       estadoAnteriorSistema = estadoAtualSistema;
     }
-    if (millis() - timer > 3000)
-    {
-      estadoAtualSistema = INICIO;
-    }
+    // if (millis() - timer > 3000)
+    // {
+    //   estadoAtualSistema = INICIO;
+    // }
+    digitalWrite(pinoTranca, HIGH); // Abre a porta;
+    delay(4000);
+    digitalWrite(pinoTranca, LOW); // FECHA a porta
+    estadoAtualSistema = INICIO;
   }
 
   ultimaTecla = teclaAtual;

@@ -35,9 +35,7 @@ O sistema ainda está em desenvolvimento.
 - **Software**: Python, `face_recognition`, C++ para ESP32, comunicação serial.  
 - **Sistema Operacional**: Armbian Linux na TV Box.  
 
-## Estrutura do Repositório
-
 ---
 
-**Autor:** Fernanda Coimbra  
+**Autor:** Fernanda Souza Coimbra Machado  
 **Curso:** Engenharia de Controle e Automação – CEFET-MG

@@ -15,6 +15,7 @@ public:
     MensagemUsuario(TelaSaida &tela1, TelaSaida &tela2);
 
     void telaBemVindo();
+    void telaBemVindoMaster();
     void telaMenuInicial();
     void telaAguardandoReconhecimentoFacial();
     void telaFaceNaoReconhecida();
@@ -48,5 +49,12 @@ public:
     void telaFaceDetectada();
     void telaCadastroPrepararParaFoto();
     void telaCadastroTirandoFoto();
+    void telaConectandoWifi();
+    void telaSucessoConexaoWifi();
+    void telaFalhaConexaoWifi();
+    void telaFalhaConexaoLeitorBiometrico();
+    void telaSucessoConexaoLeitorBiometrico();
+    void telaVerificandoBiometria();
+
  
 };

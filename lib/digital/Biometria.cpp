@@ -5,20 +5,28 @@ Biometria::Biometria() : fingerprintSensor(&Serial2, password)
     
 }
 
-void Biometria::setupFingerprintSensor()
+bool Biometria::setupFingerprintSensor()
 {
-    // Inicializa o sensor
     fingerprintSensor.begin(57600);
 
-    // Verifica se a senha está correta
-    if (!fingerprintSensor.verifyPassword())
+    const unsigned long START = millis();
+    const unsigned long TIMEOUT_MS = 5000; // tempo máximo para tentar conectar
+    const unsigned long RETRY_DELAY_MS = 200;
+
+    while (millis() - START < TIMEOUT_MS)
     {
-        // Se chegou aqui significa que a senha está errada ou o sensor está problemas de conexão
-        Serial.println(F("Não foi possível conectar ao sensor de Biometria. Verifique a senha ou a conexão"));
-        while (true)
-            ;
+        if (fingerprintSensor.verifyPassword())
+        {
+            Serial.println(F("Sensor de Biometria Inicializado!"));
+            return true;
+        }
+        delay(RETRY_DELAY_MS);
     }
-    Serial.println(F("Sensor de Biometria Inicializado!"));
+
+    // Se chegou aqui, não conseguiu inicializar — não travar o sistema
+    Serial.println(F("Não foi possível conectar ao sensor de Biometria. Verifique a senha ou a conexão"));
+    // Opcional: setar uma flag interna para indicar indisponibilidade
+    return false;
 }
 
 bool Biometria::iniciaCriacaoDigital()

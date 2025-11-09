@@ -1,27 +1,31 @@
-#include <Arduino.h>
-#include "Biometria.h"         // biblioteca para o sensor biométrico
-#include "Display.h"           // biblioteca para o display OLED
-#include "Comandos.h"          // biblioteca para os comandos recebidos via serial
-#include "Teclado.h"           // biblioteca para o teclado matricial
-#include "MensagemUsuario.h"   // biblioteca para as mensagens exibidas ao usuário (display e serial)
-#include "TelaSerial.h"        // biblioteca para a "tela" serial
-#include "RegistroUsuario.h"   // biblioteca para o registro dos usuários
-#include "ComunicacaoSerial.h" // biblioteca para a comunicação serial com outro dispositivo
-// sd card e spiffs
+
+#include <Arduino.h> // Biblioteca base para desenvolvimento na plataforma Arduino
+
+#include "Biometria.h"         // Implementa o controle e a leitura do sensor biométrico
+#include "Display.h"           // Gerencia a exibição de informações no display OLED
+#include "Comandos.h"          // Define e interpreta os comandos recebidos via comunicação serial
+#include "Teclado.h"           // Implementa a leitura e o tratamento das teclas do teclado matricial
+#include "MensagemUsuario.h"   // Controla as mensagens exibidas ao usuário, tanto no display quanto na serial
+#include "TelaSerial.h"        // Responsável pela interface textual exibida na comunicação serial
+#include "RegistroUsuario.h"   // Realiza o cadastro, consulta e remoção de usuários no sistema
+#include "ComunicacaoSerial.h" // Gerencia a comunicação serial entre o ESP32 e outros dispositivos
+
+// Manipulação de arquivos e armazenamento
 #include "FS.h"
 #include "SPIFFS.h"
 #include "SD.h"
 #include "SPI.h"
-// servidor
-#include "Servidor.h"
-#include "servidor.h"
-// backup de usuarios
+
+// Gerenciamento de backup de usuários
 #include <Backup.h>
-// wifi
+
+// Conectividade Wi-Fi
 #include <WiFi.h>
 
 #define SDA_PIN 22
 #define SCL_PIN 23
+
+
 
 enum Estado
 {
@@ -29,6 +33,7 @@ enum Estado
   INICIO,
   RECONHECIMENTO_FACIAL_AGUARDANDO,
   RECONHECIMENTO_FACIAL_PROCESSANDO,
+  RECONHECIMENTO_FACIAL_NAO_RECONHECIDO,
   INSERCAO_ID_USUARIO,
   ERRO_INSERCAO_ID_USUARIO,
   INSERCAO_SENHA_USUARIO,
@@ -72,35 +77,37 @@ TelaSerial telaSerial(Serial);
 MensagemUsuario msgUsuario(displayOled, telaSerial);
 RegistroUsuario registroUsuario;
 ComunicacaoSerial comunicacaoSerial;
+Backup backup; // objeto para fazer backup dos usuarios do SPIFFS para o SD card
 
 // define o estado atual do sistema, de acordo com o fluxograma
 int estadoAtualSistema = INICIO;
 int estadoAnteriorSistema = INVALIDO;
 int contaArquivosRemovidos = 0;
 
-char ultimaTecla = '\0';            // Variável para armazenar a última tecla pressionada
-char ultimaTeclaNaoNula = '\0';     // Variável para armazenar a última tecla pressionada que não é nula
-char letraAtual = '\0';             // Variável para armazenar a letra atual para digitacao do nome
-String nomeUsuario;                 // nome do usuario
-int contadorLetras = 0;             // contador de letras digitadas
-String id;                          // id usado na autenticacao
-int idGerado;                       // id gerado para um novo usuario
-int idBiometria;                    // idBiometria gerado para um novo usuario
-String senha;                       // senha do usuario
-String confirmaSenha;               // confirma senha do usuario
-TipoUsuario tipoUsuario;            // tipo do usuario
-String stringEncontrada;            // string encontrada na busca
-Backup backup;                      // objeto para fazer backup dos usuarios do SPIFFS para o SD card
-bool usuarioRemovido = false;       // flag para indicar se o usuário foi removido
-bool emCadastro = false;            // flag para indicar se o sistema está em modo de cadastro
-bool logRegistrado = false;         // flag para indicar se o log de entrada foi registrado
-long timer = 0;                     // variável para controlar o tempo de espera em alguns estados
-const char *ssid = "House";         // SSID da sua rede Wi-Fi
-const char *senhaWifi = "12345678"; // Senha da rede Wi-Fi
-const int pinoTranca = 25;          // Pino ligado à fechadura
-
-// Criação do objeto servidor
-// Servidor servidor(ssid, senhaWifi, pinoTranca);
+char ultimaTecla = '\0';                             // Variável para armazenar a última tecla pressionada
+char ultimaTeclaNaoNula = '\0';                      // Variável para armazenar a última tecla pressionada que não é nula
+char letraAtual = '\0';                              // Variável para armazenar a letra atual para digitacao do nome
+String nomeUsuario;                                  // nome do usuario
+String nomeUsuarioDisplay;                           // nome do usuario para exibir no display
+int contadorLetras = 0;                              // contador de letras digitadas
+String id;                                           // id usado na autenticacao
+int idGerado;                                        // id gerado para um novo usuario
+int idBiometria;                                     // idBiometria gerado para um novo usuario
+String senha;                                        // senha do usuario
+String confirmaSenha;                                // confirma senha do usuario
+TipoUsuario tipoUsuario;                             // tipo do usuario
+String stringEncontrada;                             // string encontrada na busca
+bool usuarioRemovido = false;                        // flag para indicar se o usuário foi removido
+bool emCadastro = false;                             // flag para indicar se o sistema está em modo de cadastro
+bool logRegistrado = false;                          // flag para indicar se o log de entrada foi registrado
+long timer = 0;                                      // variável para controlar o tempo de espera em alguns estados
+const char *ssid = "House";                          // SSID da sua rede Wi-Fi
+const char *senhaWifi = "12345678";                  // Senha da rede Wi-Fi
+const int pinoTranca = 25;                           // Pino ligado à fechadura
+unsigned long lastInteractionMillis = 0;             // último momento em que houve interação
+const unsigned long INACTIVITY_TIMEOUT_MS = 20000UL; // 20s tempo de inatividade para voltar ao início
+const unsigned long delayFechadura = 5000UL;        // tempo que a tranca fica aberta (5 segundos)
+// const unsigned long INACTIVITY_TIMEOUT_MS = 60000UL; // 60s tempo de inatividade para voltar ao início
 
 // Função para resetar as variáveis globais
 void resetaValoresGlobais()
@@ -109,6 +116,7 @@ void resetaValoresGlobais()
   ultimaTeclaNaoNula = '\0'; // Variável para armazenar a última tecla pressionada que não é nula
   letraAtual = '\0';         // Variável para armazenar a letra atual para digitacao do nome
   nomeUsuario = "";          // nome do usuario
+  nomeUsuarioDisplay = "";   // nome do usuario
   contadorLetras = 0;        // contador de letras digitadas
   id = "";                   // id usado na autenticacao
   idGerado = 0;              // id gerado para um novo usuario
@@ -120,24 +128,42 @@ void resetaValoresGlobais()
   usuarioRemovido = false;   // flag para indicar se o usuário foi removido
 }
 
+void voltaInicioPorTimeout()
+{
+  Serial.println("Timeout de inatividade - retornando ao INICIO");
+  resetaValoresGlobais();
+  estadoAtualSistema = INICIO;
+  estadoAnteriorSistema = INVALIDO;
+  msgUsuario.telaBemVindo();
+  lastInteractionMillis = millis();
+}
 void setup()
 {
   Serial.begin(115200);
   WiFi.begin(ssid, senhaWifi);
-  // Conecta-se à rede Wi-Fi
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
+  unsigned long wifiStart = millis();
+  const unsigned long WIFI_TIMEOUT_MS = 5000; // 5s
 
   Wire.begin(SDA_PIN, SCL_PIN);
   // Inicializa os módulos
-  digital.setupFingerprintSensor();
   displayOled.displaySetup();
   teclado.setupKeypad();
+    // pino da tranca
+  pinMode(pinoTranca, OUTPUT);
+  if (!digital.setupFingerprintSensor())
+  {
+    Serial.println("Biometria indisponível — seguindo sem leitor biométrico");
+    msgUsuario.telaFalhaConexaoLeitorBiometrico();
+    delay(3000);
+  }
+  else
+  {
+    // biometria OK
+    msgUsuario.telaSucessoConexaoLeitorBiometrico();
+    delay(2000);
+  }
 
-  //  SCK MISO MOSI SS
+  //  CLK MISO MOSI SS
   SPI.begin(18, 21, 19, 5);
   if (!SD.begin(5, SPI))
   {
@@ -152,6 +178,23 @@ void setup()
   }
   Serial.println("SPIFFS montado com sucesso!");
 
+  while (WiFi.status() != WL_CONNECTED && millis() - wifiStart < WIFI_TIMEOUT_MS)
+  {
+    msgUsuario.telaConectandoWifi();
+  }
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    Serial.println("\nWiFi conectado: " + WiFi.localIP().toString());
+  }
+  else
+  {
+    Serial.println("\nFalha ao conectar ao WiFi (timeout). Seguindo sem WiFi.");
+    timer = millis();
+    msgUsuario.telaFalhaConexaoWifi();
+    delay(5000);
+
+  }
+
   // hora atual
   configTime(-3 * 3600, 0, "pool.ntp.org"); // GMT-3 para Brasil
   struct tm timeinfo;
@@ -159,9 +202,7 @@ void setup()
   {
     Serial.println(&timeinfo, "%d/%m/%Y %H:%M:%S");
   }
-
-  // pino da tranca
-  pinMode(pinoTranca, OUTPUT);
+  
 
   // Faz o backup de usuários do SPIFFS para o SD card
   backup.backupUsuarios();
@@ -176,6 +217,13 @@ void setup()
     Serial.write(logFile.read());
   }
   logFile.close();
+  // Lista os arquivos do SPIFFS (teste)
+  File logFile2 = SPIFFS.open("/usuarios.txt", "r");
+  while (logFile.available())
+  {
+    Serial.write(logFile.read());
+  }
+  logFile.close();
 }
 
 void loop()
@@ -183,6 +231,9 @@ void loop()
 
   // Lê a tecla pressionada
   char teclaAtual = teclado.teclaPressionada();
+  // atualiza último tempo de interação quando há tecla
+  if (teclaAtual != '\0')
+    lastInteractionMillis = millis();
 
   if (estadoAtualSistema == INICIO)
   {
@@ -195,6 +246,7 @@ void loop()
 
     else if (teclaAtual == 'C') // aperte a tecla C para reconhecimento facial
     {
+      lastInteractionMillis = millis();
       estadoAnteriorSistema = estadoAtualSistema;
       estadoAtualSistema = RECONHECIMENTO_FACIAL_AGUARDANDO;
       teclaAtual = '\0';
@@ -202,6 +254,7 @@ void loop()
 
     else if (teclaAtual == '#') // aperte a tecla # para login com teclado
     {
+      lastInteractionMillis = millis();
       estadoAnteriorSistema = estadoAtualSistema;
       estadoAtualSistema = INSERCAO_ID_USUARIO;
       teclaAtual = '\0';
@@ -209,8 +262,14 @@ void loop()
 
     if (digital.leitorTocado()) // Verifica se o leitor biométrico foi tocado
     {
+      // lastInteractionMillis = millis(); // interação -> reset timeout
+      msgUsuario.telaVerificandoBiometria();
       int id = digital.identificaUsuario(); // Verifica se o usuário está cadastrado no sensor biométrico
-      if (id != -1)                         // Se o ID for diferente de -1, o usuário foi identificado
+      if (id == -1)                         // Se o ID for diferente de -1, o usuário foi identificado
+      {
+        estadoAtualSistema = USUARIO_NAO_CADASTRADO;
+      }
+      else
       {
         // Serial.println("ID lido: " + String(id));
         File file = SPIFFS.open("/usuarios.txt", "r"); // Abre o arquivo de usuários
@@ -231,8 +290,10 @@ void loop()
 
         if (encontrado)
         {
+          nomeUsuarioDisplay = userEncontrado.nome;
+          msgUsuario.telaUsuarioEncontrado(nomeUsuarioDisplay);
           Serial.println("Usuário encontrado: " + userEncontrado.nome);
-          msgUsuario.telaUsuarioEncontrado(userEncontrado.nome);
+          // msgUsuario.telaUsuarioEncontrado(userEncontrado.nome);
           // Registrar log de entrada
           File logFile = SPIFFS.open("/logs.txt", "a");
           if (logFile)
@@ -240,12 +301,8 @@ void loop()
             registroUsuario.registrarLogEntrada(logFile, userEncontrado.id, userEncontrado.nome, "BIOMETRIA"); // Registrar log de entrada
             logFile.close();
           }
-          
+
           estadoAtualSistema = USUARIO_ENCONTRADO;
-        }
-        else
-        {
-          estadoAtualSistema = USUARIO_NAO_CADASTRADO;
         }
       }
     }
@@ -275,33 +332,60 @@ void loop()
       // A aplicação em python precisa estar rodando nesse momento
       comunicacaoSerial.iniciarReconhecimentoFacial();
       timer = millis();
+      lastInteractionMillis = millis(); // conta a partir do envio do comando
       estadoAnteriorSistema = estadoAtualSistema;
     }
 
     // Aguarda resposta da aplicação Python via Serial
     if (Serial.available())
     {
+      lastInteractionMillis = millis(); // interação pela serial
       String resposta = Serial.readStringUntil('\n');
       resposta.trim();
       if (resposta.startsWith("face_detectada:")) // Exemplo: "face_detectada:1234"
       {
         id = resposta.substring(resposta.indexOf(':') + 1); // Extrai o ID após os dois pontos
-        // Serial.print("ID recebido: ");
-        // Serial.println(id);
-        // Serial.print("ID convertido: ");
         Serial.println(id.toInt());
         estadoAtualSistema = RECONHECIMENTO_FACIAL_PROCESSANDO;
       }
       else if (resposta == "face_nao_reconhecida")
       {
-        timer = millis();
-        msgUsuario.telaFaceNaoReconhecida();
-        Serial.println("Usuario não detectado");
-        if (millis() - timer > 3000)
-        {
-          estadoAtualSistema = INICIO;
-        }
+        Serial.println("Usuario não detectado (face_nao_reconhecida)");
+        estadoAtualSistema = RECONHECIMENTO_FACIAL_NAO_RECONHECIDO;
+        estadoAnteriorSistema = INVALIDO; // força execução da entrada no próximo estado
       }
+    }
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout durante reconhecimento facial");
+      voltaInicioPorTimeout();
+      return;
+    }
+  }
+
+    else if (estadoAtualSistema == RECONHECIMENTO_FACIAL_NAO_RECONHECIDO)
+  {
+    if (estadoAnteriorSistema != estadoAtualSistema)
+    {
+      estadoAnteriorSistema = estadoAtualSistema;
+      timer = millis();                    // tempo de exibição da mensagem
+      lastInteractionMillis = millis();    // evita timeout global enquanto mostra a mensagem
+      msgUsuario.telaFaceNaoReconhecida(); // exibe a mensagem (apenas na entrada)
+    }
+
+    // permanece aqui por 3 segundos (não bloqueante), depois volta ao INICIO
+    if (millis() - timer > 3000)
+    {
+      estadoAtualSistema = INICIO;
+      estadoAnteriorSistema = INVALIDO;
+    }
+
+    // ainda responde ao timeout global de inatividade se necessário
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout durante tela 'face não reconhecida' - voltando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
     }
   }
 
@@ -320,7 +404,7 @@ void loop()
         registroUsuario.registrarLogEntrada(logFile, user.id, user.nome, "RECONHECIMENTO_FACIAL"); // Registrar log de entrada
         logFile.close();
       }
-      delay(4000);
+      delay(delayFechadura);
       estadoAtualSistema = INICIO;
       digitalWrite(pinoTranca, LOW); // FECHA a porta
     }
@@ -339,8 +423,16 @@ void loop()
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
       teclado.armazenaDigito(teclaAtual);
+      lastInteractionMillis = millis(); // atualiza tempo da última interação
     }
     msgUsuario.desenhaTelaDigiteId(teclado.digitosArmazenados);
+
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout de inatividade - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
+    }
 
     if (teclaAtual == '#')
     {
@@ -365,7 +457,18 @@ void loop()
   {
     estadoAnteriorSistema = estadoAtualSistema;
     msgUsuario.telaIdNaoInformado(); // Mensagem avisando para pressionar * para retornar ao menu ou # para tentar novamente
-    // timer = millis();
+
+    // se houver tecla pressione atualiza interação
+    if (teclaAtual != '\0')
+      lastInteractionMillis = millis();
+
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout de inatividade - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
+    }
+
     if (teclaAtual == '*')
     {
       estadoAtualSistema = INICIO;
@@ -386,8 +489,19 @@ void loop()
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
       teclado.armazenaDigito(teclaAtual);
+      lastInteractionMillis = millis(); // atualiza tempo da última interação
     }
     msgUsuario.desenhaTelaDigiteSenha(teclado.digitosArmazenados);
+
+    // timeout de digitação da senha
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      // cancela inserção por inatividade
+      teclado.limpaDigitosArmazenados();
+      estadoAtualSistema = INICIO;
+      teclaAtual = '\0';
+      return;
+    }
 
     if (teclaAtual == '#')
     {
@@ -412,7 +526,16 @@ void loop()
   {
     estadoAnteriorSistema = estadoAtualSistema;
     msgUsuario.telaSenhaNaoInformada(); // Mensagem avisando para pressionar * ou tentar novamente
-    // timer = millis();
+
+    // atualiza interação caso haja tecla
+    if (teclaAtual != '\0')
+      lastInteractionMillis = millis();
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout de inatividade - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
+    }
     if (teclaAtual == '*') // volta para o menu inicial
     {
       estadoAtualSistema = INICIO;
@@ -436,6 +559,7 @@ void loop()
     File file = SPIFFS.open("/usuarios.txt", "r");                                    // Abre o arquivo de usuários do SPIFFS
     Usuario user = registroUsuario.recuperaUsuario(file, id.toInt(), senha, TECLADO); // Busca o usuário pelo ID e senha
     nomeUsuario = user.nome;
+    nomeUsuarioDisplay = nomeUsuario;
     file.close();
     if (user.id == -1) // Se o ID for -1, o usuário não foi encontrado ou a senha está incorreta
     {
@@ -458,11 +582,10 @@ void loop()
       {
         msgUsuario.telaUsuarioEncontrado(user.nome);
         digitalWrite(pinoTranca, HIGH); // Abre a porta;
-        delay(4000);
+        delay(delayFechadura);
         digitalWrite(pinoTranca, LOW); // FECHA a porta
         if (millis() - timer > 3000)
         {
-          // colocar estado para abrir a porta
           estadoAtualSistema = INICIO;
         }
       }
@@ -478,11 +601,21 @@ void loop()
       resetaValoresGlobais();
     }
 
+    if (teclaAtual != '\0')
+      lastInteractionMillis = millis();
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout de inatividade - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
+    }
+
     if (teclaAtual == '1')
     {
       // abre porta
+      msgUsuario.telaUsuarioEncontrado(nomeUsuarioDisplay);
       digitalWrite(pinoTranca, HIGH);
-      delay(4000);
+      delay(delayFechadura);
       digitalWrite(pinoTranca, LOW);
       estadoAtualSistema = INICIO;
       teclaAtual = '\0';
@@ -524,6 +657,15 @@ void loop()
       ultimaTeclaNaoNula = '\0';
       timer = millis();
       estadoAnteriorSistema = estadoAtualSistema;
+    }
+
+    if (teclaAtual != '\0')
+      lastInteractionMillis = millis();
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout de inatividade - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
     }
 
     if (letraAtual == '\0')
@@ -597,6 +739,14 @@ void loop()
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
       teclado.armazenaDigito(teclaAtual);
+      lastInteractionMillis = millis();
+    }
+
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout de inatividade - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
     }
 
     msgUsuario.telaCadastroDigiteSenha(teclado.digitosArmazenados, idGerado); // mostra o id gerado e a senha digitada
@@ -617,9 +767,17 @@ void loop()
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
       teclado.armazenaDigito(teclaAtual);
+      lastInteractionMillis = millis();
     }
 
     msgUsuario.telaCadastroDigiteNovamenteSenha(teclado.digitosArmazenados);
+
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout de inatividade - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
+    }
 
     if (teclaAtual == '#')
     {
@@ -653,43 +811,99 @@ void loop()
   }
   else if (estadoAtualSistema == CADASTRO_BIOMETRIA_ENCOSTE_DEDO) // aguarda o usuario encostar o dedo no leitor biometrico
   {
-    estadoAnteriorSistema = estadoAtualSistema;
-    msgUsuario.telaCadastroBiometriaEncosteDedo();
+    // estadoAnteriorSistema = estadoAtualSistema;
+    // msgUsuario.telaCadastroBiometriaEncosteDedo();
+    // if (digital.leitorTocado())
+    // {
+    //   bool primeiraImagemOk = digital.iniciaCriacaoDigital(); // inicia a criação da digital (pega a primeira imagem)
+    //   if (primeiraImagemOk)
+    //   {
+    //     estadoAtualSistema = CADASTRO_BIOMETRIA_RETIRE_DEDO;
+    //   }
+    // }
+
+    // registra entrada no estado e reinicia timeout de interação
+    if (estadoAnteriorSistema != estadoAtualSistema)
+    {
+      estadoAnteriorSistema = estadoAtualSistema;
+      msgUsuario.telaCadastroBiometriaEncosteDedo();
+      lastInteractionMillis = millis();
+    }
+
+    // se houver interação no leitor, atualiza e tenta iniciar a criação da digital
     if (digital.leitorTocado())
     {
+      lastInteractionMillis = millis();
       bool primeiraImagemOk = digital.iniciaCriacaoDigital(); // inicia a criação da digital (pega a primeira imagem)
       if (primeiraImagemOk)
       {
         estadoAtualSistema = CADASTRO_BIOMETRIA_RETIRE_DEDO;
       }
     }
+
+    // timeout de inatividade: cancela cadastro biometria e volta ao início
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout durante cadastro (encoste dedo) - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
+    }
   }
   // estado para caso a digital ja esteja cadastrada (não utilizado no momento)
-  else if (estadoAtualSistema == CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO)
-  {
-    if (estadoAtualSistema != estadoAnteriorSistema)
-    {
-      timer = millis();
-      estadoAnteriorSistema = estadoAtualSistema;
-    }
-    msgUsuario.telaCadastroBiometriaJaCadastradaErro();
-    if (millis() - timer > 3000)
-    {
-      estadoAtualSistema = CADASTRO_BIOMETRIA_ENCOSTE_DEDO;
-    }
-  }
+  // else if (estadoAtualSistema == CADASTRO_BIOMETRIA_JA_CADASTRADA_ERRO)
+  // {
+  //   if (estadoAtualSistema != estadoAnteriorSistema)
+  //   {
+  //     timer = millis();
+  //     estadoAnteriorSistema = estadoAtualSistema;
+  //   }
+  //   msgUsuario.telaCadastroBiometriaJaCadastradaErro();
+  //   if (millis() - timer > 3000)
+  //   {
+  //     estadoAtualSistema = CADASTRO_BIOMETRIA_ENCOSTE_DEDO;
+  //   }
+  // }
 
   else if (estadoAtualSistema == CADASTRO_BIOMETRIA_RETIRE_DEDO) // pede para o usuario retirar o dedo do leitor biometrico
   {
+    // if (estadoAtualSistema != estadoAnteriorSistema)
+    // {
+    //   timer = millis();
+    //   estadoAnteriorSistema = estadoAtualSistema;
+    // }
+    // msgUsuario.telaCadastroBiometriaRetireDedo();
+    // if (!digital.leitorTocado() && (millis() - timer > 5000))
+    // {
+    //   estadoAtualSistema = CADASTRO_BIOMETRIA_ENCOSTE_DEDO_NOVAMENTE;
+    // }
+
     if (estadoAtualSistema != estadoAnteriorSistema)
     {
       timer = millis();
       estadoAnteriorSistema = estadoAtualSistema;
+      msgUsuario.telaCadastroBiometriaRetireDedo();
+      lastInteractionMillis = millis();
     }
-    msgUsuario.telaCadastroBiometriaRetireDedo();
+
+    // se o usuário voltou a encostar antes do tempo limite de remoção, reinicia criação (tratamento conservador)
+    if (digital.leitorTocado())
+    {
+      lastInteractionMillis = millis();
+      // mantém o estado até o usuário retirar; se necessário, pode adicionar lógica para abortar
+    }
+
+    // se o usuário retirou o dedo e passou o tempo mínimo, segue para a próxima etapa
     if (!digital.leitorTocado() && (millis() - timer > 5000))
     {
       estadoAtualSistema = CADASTRO_BIOMETRIA_ENCOSTE_DEDO_NOVAMENTE;
+    }
+
+    // timeout global de inatividade (por exemplo usuário não prossegue)
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout durante cadastro (retire dedo) - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
     }
   }
 
@@ -699,9 +913,11 @@ void loop()
     {
       estadoAnteriorSistema = estadoAtualSistema;
       msgUsuario.telaCadastroBiometriaEncosteDedoNovamente();
+      lastInteractionMillis = millis();
     }
     if (digital.leitorTocado())
     {
+      lastInteractionMillis = millis();
       File file = SPIFFS.open("/usuarios.txt", "r");
       idBiometria = registroUsuario.buscaIdBiometriaDisponivel(file); // busca o próximo ID de biometria disponível no arquivo
       file.close();
@@ -710,6 +926,14 @@ void loop()
         Serial.println("Biometria cadastrada com sucesso na posicao: " + idBiometria); // debug
         estadoAtualSistema = BIOMETRIA_CADASTRADA_COM_SUCESSO;
       }
+    }
+
+    // timeout de inatividade: cancela cadastro biometria e volta ao início
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout durante cadastro (encoste novamente) - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
     }
   }
 
@@ -749,6 +973,7 @@ void loop()
       msgUsuario.telaCadastroTirandoFoto();
       estadoAnteriorSistema = estadoAtualSistema;
       comunicacaoSerial.tirarFotos(String(idGerado), nomeUsuario); // envia comando via serial para a aplicação python tirar a foto
+      lastInteractionMillis = millis();
     }
 
     if (Serial.available())
@@ -762,21 +987,50 @@ void loop()
         estadoAtualSistema = CADASTRO_INFORMA_TIPO_USUARIO;
       }
     }
+    // timeout de inatividade: cancela fluxo de cadastro e retorna ao INICIO
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout durante cadastro (tirando foto) - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
+    }
   }
 
   else if (estadoAtualSistema == CADASTRO_INFORMA_TIPO_USUARIO) // informa o tipo do usuario (comum ou master)
   {
-    estadoAnteriorSistema = estadoAtualSistema;
-    msgUsuario.telaCadastroInformeTipoUsuario();
+
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      estadoAnteriorSistema = estadoAtualSistema;
+      msgUsuario.telaCadastroInformeTipoUsuario();
+      lastInteractionMillis = millis();
+    }
+
+    // atualiza timeout se houver tecla
+    if (teclaAtual != '\0')
+    {
+      lastInteractionMillis = millis();
+    }
+
+    // timeout de inatividade: cancela fluxo de cadastro e retorna ao INICIO
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout ao informar tipo de usuário - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
+    }
+
     if (teclaAtual == '0') // comum
     {
       tipoUsuario = COMUM;
       estadoAtualSistema = SALVA_USUARIO_SD_CARD;
+      teclaAtual = '\0';
     }
     else if (teclaAtual == '1') // master
     {
       tipoUsuario = MASTER;
       estadoAtualSistema = SALVA_USUARIO_SD_CARD;
+      teclaAtual = '\0';
     }
   }
   else if (estadoAtualSistema == SALVA_USUARIO_SD_CARD) // salva o novo usuario no SD card (mudar para SPIFFS)
@@ -795,6 +1049,7 @@ void loop()
       file.close();
       estadoAnteriorSistema = estadoAtualSistema;
       backup.backupUsuarios(); // faz o backup dos usuarios do SPIFFS para o SD card
+      backup.backupLogsEntrada(); // faz o backup dos usuarios do SPIFFS para o SD card
     }
     msgUsuario.telaUsuarioCadastrado();
     if (teclaAtual == '#')
@@ -822,8 +1077,16 @@ void loop()
     if (teclaAtual != '\0' && teclaAtual != '#')
     {
       teclado.armazenaDigito(teclaAtual);
+      lastInteractionMillis = millis();
     }
     msgUsuario.telaDigiteIdRemoveUsuario(teclado.digitosArmazenados);
+
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout de inatividade - retornando ao INICIO");
+      voltaInicioPorTimeout();
+      return;
+    }
 
     if (teclaAtual == '#')
     {
@@ -840,14 +1103,15 @@ void loop()
     if (estadoAnteriorSistema != estadoAtualSistema)
     {
       estadoAnteriorSistema = estadoAtualSistema;
+      lastInteractionMillis = millis();                                      // inicia timeout para confirmação
       File file = SPIFFS.open("/usuarios.txt", "r");                         // Abre o arquivo de usuários do SPIFFS
       stringEncontrada = registroUsuario.buscaIdNoArquivo(file, id.toInt()); // Busca a string do usuário pelo ID
-      Serial.println("String encontrada: " + stringEncontrada);
+      // Serial.println("String encontrada: " + stringEncontrada);
 
       if (stringEncontrada != "")
       {
         Usuario user = registroUsuario.transformaTextoEmUsuario(stringEncontrada);
-        Serial.println("Usuario encontrado: " + user.nome);
+        // Serial.println("Usuario encontrado: " + user.nome);
         nomeUsuario = user.nome;
         msgUsuario.telaConfirmaRemocaoUsuario(nomeUsuario);
       }
@@ -860,6 +1124,20 @@ void loop()
         return;
       }
       file.close();
+    }
+
+    // atualiza tempo de interação quando houver tecla
+    if (teclaAtual != '\0')
+    {
+      lastInteractionMillis = millis();
+    }
+
+    // verifica timeout de confirmação
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout na confirmação de remoção - cancelando e retornando ao menu master");
+      voltaInicioPorTimeout();
+      return;
     }
 
     if (teclaAtual != '\0') // só reage se houver tecla
@@ -885,9 +1163,16 @@ void loop()
     if (estadoAnteriorSistema != estadoAtualSistema)
     {
       estadoAnteriorSistema = estadoAtualSistema;
+      lastInteractionMillis = millis();
     }
     msgUsuario.telaRemoveUsuarioIdNaoEncontrado();
 
+    if (millis() - lastInteractionMillis > INACTIVITY_TIMEOUT_MS)
+    {
+      Serial.println("Timeout após ID não encontrado - retornando ao menu master");
+      voltaInicioPorTimeout();
+      return;
+    }
     if (teclaAtual == '#')
     {
       estadoAtualSistema = REMOVE_USUARIO_INFORME_ID;
@@ -918,6 +1203,7 @@ void loop()
         // file.close();
         return;
       }
+
       usuarioRemovido = registroUsuario.removeUsuarioSdCard(file, fileTemp, registroUsuario.transformaTextoEmUsuario(stringEncontrada)); // remove o usuario do SPIFFS
       file.close();
       fileTemp.close();
@@ -925,8 +1211,8 @@ void loop()
 
       if (usuarioRemovido) // se o usuario foi removido com sucesso
       {
-        Serial.println("Usuario removido com sucesso!:");
-        Serial.println(usuarioRemovido);
+        // Serial.println("Usuario removido com sucesso!:");
+        // Serial.println(usuarioRemovido);
         SPIFFS.remove("/usuarios.txt");                                                                // apaga o arquivo original
         SPIFFS.rename("/usuariosTemp.txt", "/usuarios.txt");                                           // renomeia o arquivo temporario para o nome original
         digital.apagarDigital(registroUsuario.transformaTextoEmUsuario(stringEncontrada).idBiometria); // apaga a digital do usuario no sensor
@@ -974,17 +1260,27 @@ void loop()
     if (estadoAtualSistema != estadoAnteriorSistema)
     {
       timer = millis();
-      msgUsuario.telaMsgUsuarioEncontrado();
+      msgUsuario.telaUsuarioEncontrado(nomeUsuarioDisplay);
       estadoAnteriorSistema = estadoAtualSistema;
     }
-    // if (millis() - timer > 3000)
-    // {
-    //   estadoAtualSistema = INICIO;
-    // }
+  
     digitalWrite(pinoTranca, HIGH); // Abre a porta;
-    delay(4000);
+    delay(delayFechadura);
     digitalWrite(pinoTranca, LOW); // FECHA a porta
     estadoAtualSistema = INICIO;
+  }
+  else if (estadoAtualSistema == USUARIO_NAO_CADASTRADO)
+  {
+    if (estadoAtualSistema != estadoAnteriorSistema)
+    {
+      timer = millis();
+      msgUsuario.telaUsuarioNaoCadastrado();
+      estadoAnteriorSistema = estadoAtualSistema;
+    }
+    if (millis() - timer > 3000)
+    {
+      estadoAtualSistema = INICIO;
+    }
   }
 
   ultimaTecla = teclaAtual;

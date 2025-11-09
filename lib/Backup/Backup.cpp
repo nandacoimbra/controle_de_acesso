@@ -29,6 +29,36 @@ void Backup::backupUsuarios()
     Serial.println("Backup concluído com sucesso!");
 }
 
+void Backup::backupLogsEntrada()
+{
+    File spiffsFile = SPIFFS.open("/logs.txt", FILE_READ);
+    if (!spiffsFile)
+    {
+        Serial.println("Não foi possível abrir logs.txt no SPIFFS");
+        return;
+    }
+
+    File sdFile = SD.open("/logs_backup.txt", FILE_WRITE);
+    if (!sdFile)
+    {
+        Serial.println("Não foi possível criar logs_backup.txt no SD");
+        spiffsFile.close();
+        return;
+    }
+
+    Serial.println("Iniciando backup dos logs de entrada (SPIFFS -> SD)...");
+    while (spiffsFile.available())
+    {
+        sdFile.write(spiffsFile.read());
+    }
+
+    spiffsFile.close();
+    sdFile.close();
+
+    Serial.println("Backup dos logs concluído com sucesso!");   
+
+}
+
 void Backup::imprimirBackup()
 {
     File file = SD.open("/usuarios_backup.txt", FILE_READ);

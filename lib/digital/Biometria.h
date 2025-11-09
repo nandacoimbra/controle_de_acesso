@@ -17,7 +17,7 @@ public:
     // métodos
     Biometria();
     int limiarConfianca;
-    void setupFingerprintSensor();
+    bool setupFingerprintSensor();
     bool iniciaCriacaoDigital();
     bool finalizaCriacaoDigital(int id);
     int identificaUsuario();

@@ -6,14 +6,20 @@ MensagemUsuario::MensagemUsuario(TelaSaida &tela1, TelaSaida &tela2) : telaPrinc
 
 void MensagemUsuario::telaBemVindo()
 {
-    String tela = "CONTROLE DE ACESSO\n";
-    tela += "CEFET Leopoldina\n";
-    tela += "Bem Vindo!\n";
-    tela += "Pressione C para\n";
-    tela += "reconhecimento facial\n";
-    tela += "Pressione # para\n";
-    tela += "login via teclado\n";
+    String tela = "BEM VINDO!\n"; // Linha 1
+    tela += "\n"; // Linha 2
+    tela += "Selecione o acesso:\n"; // Linha 2
+    tela += "\n"; // Linha 2
+    tela += "  [C] - Face\n"; // Linha 3
+    tela += "  [#] - ID/Senha\n"; // Linha 4
+    tela += "  [Toque] - Biometria"; // Linha 5
     telaPrincipal.desenhaTexto(tela);
+}
+void MensagemUsuario::telaBemVindoMaster()
+{
+    String tela = "Bem vindo!\n"; 
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
 }
 // void MensagemUsuario::telaBemVindo()
 // {
@@ -25,7 +31,6 @@ void MensagemUsuario::telaBemVindo()
 //     tela += "# -> login via teclado\n";
 //     telaPrincipal.desenhaTexto(tela);
 // }
-
 
 void MensagemUsuario::telaMenuInicial()
 {
@@ -43,8 +48,6 @@ void MensagemUsuario::telaAguardandoReconhecimentoFacial()
 void MensagemUsuario::telaFaceNaoReconhecida()
 {
     String tela = "Rosto nao reconhecido\n";
-    tela += "Pressione # para tentar novamente\n";
-    tela += "Pressione * para retornar ao Menu\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }
@@ -138,8 +141,8 @@ void MensagemUsuario::telaUsuarioNaoCadastrado()
 
 void MensagemUsuario::telaUsuarioEncontrado(String nome)
 {
-    String tela = "Bem vindo, " + nome + "!";
-    tela += "Abrindo a porta\n";
+    String tela = "Bem vindo," + nome + "!\n";
+    tela += "Acesso liberado\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }
@@ -158,7 +161,7 @@ void MensagemUsuario::telaMenuMaster()
     tela += "2 - Cadastrar usuario\n";
     tela += "3 - Remover usuario\n";
     tela += "4 - Menu inicial\n";
-    tela += "5 - Apagar Digitais";
+    // tela += "5 - Apagar Digitais";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }
@@ -249,12 +252,12 @@ void MensagemUsuario::telaCadastroInformeTipoUsuario()
     telaSecundaria.desenhaTexto(tela);
 }
 
-void MensagemUsuario::telaApagarTodasDigitais()
-{
-    String tela = "Apagando todas as digitais\n";
-    telaPrincipal.desenhaTexto(tela);
-    telaSecundaria.desenhaTexto(tela);
-}
+// void MensagemUsuario::telaApagarTodasDigitais()
+// {
+//     String tela = "Apagando todas as digitais\n";
+//     telaPrincipal.desenhaTexto(tela);
+//     telaSecundaria.desenhaTexto(tela);
+// }
 
 void MensagemUsuario::telaFaceDetectada()
 {
@@ -266,6 +269,7 @@ void MensagemUsuario::telaFaceDetectada()
 void MensagemUsuario::telaCadastroPrepararParaFoto()
 {
     String tela = "Reconhecimento Facial\n";
+    tela += "\n";
     tela += "Preparar para foto\n";
     tela += "Posicione o rosto corretamente\n";
     telaPrincipal.desenhaTexto(tela);
@@ -276,6 +280,49 @@ void MensagemUsuario::telaCadastroTirandoFoto()
 {
     String tela = "Tirando foto\n";
     tela += "Aguarde ...\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaConectandoWifi()
+{
+    String tela = "Conectando ao Wifi...\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaSucessoConexaoWifi()
+{
+    String tela = "Conexao Wifi bem sucedida\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaFalhaConexaoWifi()
+{
+    String tela = "Falha na conexao Wifi\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaFalhaConexaoLeitorBiometrico()
+{
+    String tela = "Falha na conexao com o leitor biometrico\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+
+}
+
+void MensagemUsuario::telaSucessoConexaoLeitorBiometrico()
+{
+    String tela = "Conexao com o leitor biometrico bem sucedida\n";
+    telaPrincipal.desenhaTexto(tela);
+    telaSecundaria.desenhaTexto(tela);
+}
+
+void MensagemUsuario::telaVerificandoBiometria()
+{
+    String tela = "Verificando biometria...\n";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }

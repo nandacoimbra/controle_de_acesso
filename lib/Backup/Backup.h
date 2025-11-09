@@ -13,6 +13,7 @@ private:
 public:
     // métodos
     void backupUsuarios();
+    void backupLogsEntrada();
     void imprimirBackup();
     void listarArquivosSPIFFS();
  

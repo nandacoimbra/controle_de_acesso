@@ -15,6 +15,8 @@ public:
     void backupUsuarios();
     void backupLogsEntrada();
     void imprimirBackup();
+    void imprimirLogs();
+    void imprimirUsuarios();
     void listarArquivosSPIFFS();
- 
+
 };

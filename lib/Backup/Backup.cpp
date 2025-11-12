@@ -76,6 +76,40 @@ void Backup::imprimirBackup()
     file.close();
 }
 
+void Backup::imprimirLogs()
+{
+    File file = SD.open("/logs_backup.txt", FILE_READ);
+    if (!file)
+    {
+        Serial.println("Erro ao abrir logs_backup.txt no SD");
+        return;
+    }
+
+    Serial.println("Conteúdo do logs_backup.txt no SD:");
+    while (file.available())
+    {
+        Serial.write(file.read());
+    }
+    file.close();
+}
+
+void Backup::imprimirUsuarios()
+{
+    File file = SPIFFS.open("/usuarios.txt", FILE_READ);
+    if (!file)
+    {
+        Serial.println("Erro ao abrir usuarios.txt no SPIFFS");
+        return;
+    }
+
+    Serial.println("Conteúdo do usuarios.txt no SPIFFS:");
+    while (file.available())
+    {
+        Serial.write(file.read());
+    }
+    file.close();
+}
+
 void Backup::listarArquivosSPIFFS()
 {
     Serial.println("Arquivos no SPIFFS:");

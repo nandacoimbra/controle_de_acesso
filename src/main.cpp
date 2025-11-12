@@ -18,15 +18,18 @@
 
 // Gerenciamento de backup de usuários
 #include <Backup.h>
-
 // Conectividade Wi-Fi
 #include <WiFi.h>
 
+// definicao de pinos
 #define SDA_PIN 22
 #define SCL_PIN 23
+#define CLK_PIN 18
+#define MISO_PIN 21
+#define MOSI_PIN 19
+#define SS_PIN 5
 
-
-
+// definicao de estados do sistema
 enum Estado
 {
   INVALIDO,
@@ -61,7 +64,6 @@ enum Estado
   ERRO_REMOVER_USUARIO,
   CADASTRO_PREPARAR_PARA_FOTO,
   CADASTRO_TIRANDO_FOTO
-
 };
 
 // instancias dos objetos
@@ -101,9 +103,20 @@ const char *ssid = "House";                          // SSID da sua rede Wi-Fi
 const char *senhaWifi = "12345678";                  // Senha da rede Wi-Fi
 const int pinoTranca = 25;                           // Pino ligado à fechadura
 unsigned long lastInteractionMillis = 0;             // último momento em que houve interação
-const unsigned long INACTIVITY_TIMEOUT_MS = 20000UL; // 20s tempo de inatividade para voltar ao início
-const unsigned long delayFechadura = 5000UL;        // tempo que a tranca fica aberta (5 segundos)
+const unsigned long INACTIVITY_TIMEOUT_MS = 60000UL; // 20s tempo de inatividade para voltar ao início
+const unsigned long delayFechadura = 5000UL;         // tempo que a tranca fica aberta (5 segundos)
 // const unsigned long INACTIVITY_TIMEOUT_MS = 60000UL; // 60s tempo de inatividade para voltar ao início
+
+// Métricas de desempenho
+unsigned long tempoAutenticacao = 0;
+
+// Biometria
+unsigned long tempoTotalBiometria = 0;
+unsigned long contaBiometria = 0;
+
+// Reconhecimento facial
+unsigned long tempoTotalReconhecimento = 0;
+unsigned long contaReconhecimento = 0;
 
 // Função para resetar as variáveis globais
 void resetaValoresGlobais()
@@ -133,6 +146,76 @@ void voltaInicioPorTimeout()
   msgUsuario.telaBemVindo();
   lastInteractionMillis = millis();
 }
+
+// --- Função para resetar usuários no SPIFFS e opcionalmente apagar digitais ---
+void resetUsuariosParaAdmin(bool manterBiometria)
+{
+  // 1) Backup do arquivo atual (se existir)
+  if (SPIFFS.exists("/usuarios.txt"))
+  {
+    File src = SPIFFS.open("/usuarios.txt", "r");
+    File bak = SPIFFS.open("/usuarios_backup.txt", "w");
+    if (src && bak)
+    {
+      while (src.available())
+        bak.write(src.read());
+      src.close();
+      bak.close();
+      Serial.println("Backup /usuarios.txt -> /usuarios_backup.txt realizado");
+    }
+    else
+    {
+      Serial.println("Falha ao criar backup de /usuarios.txt");
+      if (src)
+        src.close();
+      if (bak)
+        bak.close();
+    }
+  }
+
+  // 2) Escolhe idBiometria do admin de acordo com manterBiometria
+  String linhaAdmin;
+  if (manterBiometria)
+  {
+    // preserva IDs biométricos (assuma que posição 1 terá que ser cadastrada manualmente se não existir)
+    linhaAdmin = "id:100,idBiometria:1,nome:Fernanda Coimbra,tipo:1,senha:123;\n";
+  }
+  else
+  {
+    // apaga digitais e marca admin sem biometria (idBiometria:0)
+    linhaAdmin = "id:100,idBiometria:0,nome:admin,tipo:1,senha:123;\n";
+  }
+
+  // 3) Sobrescreve /usuarios.txt com apenas o admin
+  File f = SPIFFS.open("/usuarios.txt", "w");
+  if (!f)
+  {
+    Serial.println("Erro ao abrir /usuarios.txt para escrita");
+    return;
+  }
+  f.print(linhaAdmin);
+  f.close();
+  Serial.println("Arquivo /usuarios.txt sobrescrito com o admin");
+
+  // 4) Apaga digitais no sensor se solicitado
+  if (!manterBiometria)
+  {
+    if (digital.apagarTodasDigitais())
+    {
+      Serial.println("Todas as digitais apagadas no sensor biométrico");
+    }
+    else
+    {
+      Serial.println("Falha ao apagar digitais (sensor pode não estar disponível)");
+    }
+  }
+
+  // 5) Atualiza backup no SD
+  backup.backupUsuarios();
+  backup.backupLogsEntrada();
+  Serial.println("Backup atualizado no SD");
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -144,7 +227,7 @@ void setup()
   // Inicializa os módulos
   displayOled.displaySetup();
   teclado.setupKeypad();
-    // pino da tranca
+  // pino da tranca
   pinMode(pinoTranca, OUTPUT);
   if (!digital.setupFingerprintSensor())
   {
@@ -158,10 +241,9 @@ void setup()
     msgUsuario.telaSucessoConexaoLeitorBiometrico();
     delay(2000);
   }
-
   //  CLK MISO MOSI SS
-  SPI.begin(18, 21, 19, 5);
-  if (!SD.begin(5, SPI))
+  SPI.begin(CLK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
+  if (!SD.begin(SS_PIN, SPI))
   {
     Serial.println("Card Mount Failed");
     return;
@@ -187,8 +269,7 @@ void setup()
     Serial.println("\nFalha ao conectar ao WiFi (timeout). Seguindo sem WiFi.");
     timer = millis();
     msgUsuario.telaFalhaConexaoWifi();
-    delay(5000);
-
+    delay(3000);
   }
 
   // hora atual
@@ -198,28 +279,12 @@ void setup()
   {
     Serial.println(&timeinfo, "%d/%m/%Y %H:%M:%S");
   }
-  
 
-  // Faz o backup de usuários do SPIFFS para o SD card
+  // // Faz o backup de usuários do SPIFFS para o SD card
   backup.backupUsuarios();
 
-  // Mostra o que foi salvo no SD card (TESTE)
-  backup.imprimirBackup();
-
-  // Lista os arquivos do SPIFFS (teste)
-  File logFile = SPIFFS.open("/logs.txt", "r");
-  while (logFile.available())
-  {
-    Serial.write(logFile.read());
-  }
-  logFile.close();
-  // Lista os arquivos do SPIFFS (teste)
-  File logFile2 = SPIFFS.open("/usuarios.txt", "r");
-  while (logFile.available())
-  {
-    Serial.write(logFile.read());
-  }
-  logFile.close();
+  // // Mostra o que foi salvo no SD card (TESTE)
+  // backup.imprimirBackup();
 }
 
 void loop()
@@ -259,6 +324,8 @@ void loop()
     if (digital.leitorTocado()) // Verifica se o leitor biométrico foi tocado
     {
       // lastInteractionMillis = millis(); // interação -> reset timeout
+      // inicia medição de tempo de autenticação por biometria
+      tempoAutenticacao = millis();
       msgUsuario.telaVerificandoBiometria();
       int id = digital.identificaUsuario(); // Verifica se o usuário está cadastrado no sensor biométrico
       if (id == -1)                         // Se o ID for diferente de -1, o usuário foi identificado
@@ -286,6 +353,12 @@ void loop()
 
         if (encontrado)
         {
+          // registra métrica de tempo para biometria
+          unsigned long elapsed = millis() - tempoAutenticacao;
+          tempoTotalBiometria += elapsed;
+          contaBiometria++;
+          Serial.println("Tempo biometria (ms): " + String(elapsed) + " | media(ms): " + String(tempoTotalBiometria / contaBiometria));
+
           nomeUsuarioDisplay = userEncontrado.nome;
           msgUsuario.telaUsuarioEncontrado(nomeUsuarioDisplay);
           Serial.println("Usuário encontrado: " + userEncontrado.nome);
@@ -317,6 +390,38 @@ void loop()
         emCadastro = false;
         estadoAtualSistema = CADASTRO_INFORMA_TIPO_USUARIO;
       }
+      else if (comandoSerial == "reset_users")
+      {
+        Serial.println("Executando reset de usuarios (apaga digitais)...");
+        resetUsuariosParaAdmin(false); // sobrescreve e apaga digitais
+        // consome o comando e segue
+      }
+      else if (comandoSerial == "reset_users_keep_bio")
+      {
+        Serial.println("Executando reset de usuarios (mantem digitais)...");
+        resetUsuariosParaAdmin(true); // sobrescreve, mantém digitais
+      }
+      else if (comandoSerial == "usuarios")
+      {
+        Serial.println("Imprimindo usuarios do SPIFFS...");
+        backup.imprimirUsuarios();
+      }
+      else if (comandoSerial == "logs")
+      {
+        Serial.println("Imprimindo logs de entrada do SPIFFS...");
+        backup.imprimirLogs();
+      }
+      else if (comandoSerial == "arquivos")
+      {
+        Serial.println("Listando arquivos do SPIFFS...");
+        backup.listarArquivosSPIFFS();
+      }
+      else if (comandoSerial == "backup")
+      {
+        Serial.println("Realizando backup de usuarios e logs no SD card...");
+        backup.backupUsuarios();
+        backup.backupLogsEntrada();
+      }
     }
   }
 
@@ -325,10 +430,11 @@ void loop()
     if (estadoAnteriorSistema != estadoAtualSistema)
     {
       msgUsuario.telaAguardandoReconhecimentoFacial();
-      // A aplicação em python precisa estar rodando nesse momento
+      // envia comando para iniciar reconhecimento facial na aplicação python
       comunicacaoSerial.iniciarReconhecimentoFacial();
       timer = millis();
       lastInteractionMillis = millis(); // conta a partir do envio do comando
+      tempoAutenticacao = millis();
       estadoAnteriorSistema = estadoAtualSistema;
     }
 
@@ -359,7 +465,7 @@ void loop()
     }
   }
 
-    else if (estadoAtualSistema == RECONHECIMENTO_FACIAL_NAO_RECONHECIDO)
+  else if (estadoAtualSistema == RECONHECIMENTO_FACIAL_NAO_RECONHECIDO)
   {
     if (estadoAnteriorSistema != estadoAtualSistema)
     {
@@ -392,6 +498,12 @@ void loop()
     file.close();
     if (user.id != -1)
     {
+      // registra métrica de tempo para reconhecimento facial
+      unsigned long elapsed = millis() - tempoAutenticacao;
+      tempoTotalReconhecimento += elapsed;
+      contaReconhecimento++;
+      Serial.println("Tempo reconhecimento facial (ms): " + String(elapsed) + " | media(ms): " + String(tempoTotalReconhecimento / contaReconhecimento));
+
       msgUsuario.telaUsuarioEncontrado(user.nome);
       digitalWrite(pinoTranca, HIGH);               // Abre a porta
       File logFile = SPIFFS.open("/logs.txt", "a"); // Abre o arquivo de logs para registrar a entrada
@@ -609,7 +721,7 @@ void loop()
     if (teclaAtual == '1')
     {
       // abre porta
-      msgUsuario.telaUsuarioEncontrado(nomeUsuarioDisplay);
+      msgUsuario.telaBemVindoMaster();
       digitalWrite(pinoTranca, HIGH);
       delay(delayFechadura);
       digitalWrite(pinoTranca, LOW);
@@ -1044,7 +1156,7 @@ void loop()
       registroUsuario.salvaUsuarioSdCard(file, usuario); // salva o usuario no SPIFFS (mudar nome da função)
       file.close();
       estadoAnteriorSistema = estadoAtualSistema;
-      backup.backupUsuarios(); // faz o backup dos usuarios do SPIFFS para o SD card
+      backup.backupUsuarios();    // faz o backup dos usuarios do SPIFFS para o SD card
       backup.backupLogsEntrada(); // faz o backup dos usuarios do SPIFFS para o SD card
     }
     msgUsuario.telaUsuarioCadastrado();
@@ -1259,7 +1371,7 @@ void loop()
       msgUsuario.telaUsuarioEncontrado(nomeUsuarioDisplay);
       estadoAnteriorSistema = estadoAtualSistema;
     }
-  
+
     digitalWrite(pinoTranca, HIGH); // Abre a porta;
     delay(delayFechadura);
     digitalWrite(pinoTranca, LOW); // FECHA a porta
@@ -1278,7 +1390,6 @@ void loop()
       estadoAtualSistema = INICIO;
     }
   }
-
   ultimaTecla = teclaAtual;
   if (ultimaTecla != '\0')
   {

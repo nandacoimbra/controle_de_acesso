@@ -6,15 +6,17 @@ MensagemUsuario::MensagemUsuario(TelaSaida &tela1, TelaSaida &tela2) : telaPrinc
 
 void MensagemUsuario::telaBemVindo()
 {
-    String tela = "BEM VINDO!\n"; // Linha 1
-    tela += "\n"; // Linha 2
-    tela += "Selecione o acesso:\n"; // Linha 2
-    tela += "\n"; // Linha 2
-    tela += "  [C] - Face\n"; // Linha 3
-    tela += "  [#] - ID/Senha\n"; // Linha 4
-    tela += "  [Toque] - Biometria"; // Linha 5
+    String tela = "BEM VINDO!\n"; 
+    tela += "\n"; 
+    tela += "Selecione o acesso:\n"; 
+    tela += "\n";
+    tela += "  [C] - Face\n"; 
+    tela += "  [#] - ID/Senha\n"; 
+    tela += "  [Toque] - Biometria"; 
     telaPrincipal.desenhaTexto(tela);
 }
+
+
 void MensagemUsuario::telaBemVindoMaster()
 {
     String tela = "Bem vindo!\n"; 

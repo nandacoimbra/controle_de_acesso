@@ -5,7 +5,6 @@
 #include "Display.h"
 
 
-
 class ComunicacaoSerial
 {
 

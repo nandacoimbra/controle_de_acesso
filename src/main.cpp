@@ -1,6 +1,5 @@
-
-#include <Arduino.h> // Biblioteca base para desenvolvimento na plataforma Arduino
-
+// Biblioteca base para desenvolvimento na plataforma Arduino
+#include <Arduino.h> 
 #include "Biometria.h"         // Implementa o controle e a leitura do sensor biométrico
 #include "Display.h"           // Gerencia a exibição de informações no display OLED
 #include "Comandos.h"          // Define e interpreta os comandos recebidos via comunicação serial
@@ -9,13 +8,11 @@
 #include "TelaSerial.h"        // Responsável pela interface textual exibida na comunicação serial
 #include "RegistroUsuario.h"   // Realiza o cadastro, consulta e remoção de usuários no sistema
 #include "ComunicacaoSerial.h" // Gerencia a comunicação serial entre o ESP32 e outros dispositivos
-
 // Manipulação de arquivos e armazenamento
 #include "FS.h"
 #include "SPIFFS.h"
 #include "SD.h"
 #include "SPI.h"
-
 // Gerenciamento de backup de usuários
 #include <Backup.h>
 // Conectividade Wi-Fi
@@ -76,7 +73,6 @@ MensagemUsuario msgUsuario(displayOled, telaSerial);
 RegistroUsuario registroUsuario;
 ComunicacaoSerial comunicacaoSerial;
 Backup backup; // objeto para fazer backup dos usuarios do SPIFFS para o SD card
-
 // define o estado atual do sistema, de acordo com o fluxograma
 int estadoAtualSistema = INICIO;
 int estadoAnteriorSistema = INVALIDO;
@@ -219,16 +215,16 @@ void resetUsuariosParaAdmin(bool manterBiometria)
 void setup()
 {
   Serial.begin(115200);
-  WiFi.begin(ssid, senhaWifi);
-  unsigned long wifiStart = millis();
-  const unsigned long WIFI_TIMEOUT_MS = 5000; // 5s
-
   Wire.begin(SDA_PIN, SCL_PIN);
   // Inicializa os módulos
   displayOled.displaySetup();
   teclado.setupKeypad();
   // pino da tranca
   pinMode(pinoTranca, OUTPUT);
+  WiFi.begin(ssid, senhaWifi);
+
+  unsigned long wifiStart = millis();
+  const unsigned long WIFI_TIMEOUT_MS = 5000; // 5s
   if (!digital.setupFingerprintSensor())
   {
     Serial.println("Biometria indisponível — seguindo sem leitor biométrico");
@@ -424,8 +420,8 @@ void loop()
       }
     }
   }
-
-  else if (estadoAtualSistema == RECONHECIMENTO_FACIAL_AGUARDANDO) // aguarda reconhecimento facial, após usuario apertar 'C'
+  // aguarda reconhecimento facial, após usuario apertar 'C'
+  else if (estadoAtualSistema == RECONHECIMENTO_FACIAL_AGUARDANDO) 
   {
     if (estadoAnteriorSistema != estadoAtualSistema)
     {
@@ -433,7 +429,9 @@ void loop()
       // envia comando para iniciar reconhecimento facial na aplicação python
       comunicacaoSerial.iniciarReconhecimentoFacial();
       timer = millis();
-      lastInteractionMillis = millis(); // conta a partir do envio do comando
+      // evita timeout global enquanto aguarda reconhecimento
+      lastInteractionMillis = millis(); 
+      // inicia medição de tempo de autenticação por reconhecimento facial
       tempoAutenticacao = millis();
       estadoAnteriorSistema = estadoAtualSistema;
     }
@@ -667,7 +665,6 @@ void loop()
     File file = SPIFFS.open("/usuarios.txt", "r");                                    // Abre o arquivo de usuários do SPIFFS
     Usuario user = registroUsuario.recuperaUsuario(file, id.toInt(), senha, TECLADO); // Busca o usuário pelo ID e senha
     nomeUsuario = user.nome;
-    nomeUsuarioDisplay = nomeUsuario;
     file.close();
     if (user.id == -1) // Se o ID for -1, o usuário não foi encontrado ou a senha está incorreta
     {
@@ -743,18 +740,18 @@ void loop()
       teclaAtual = '\0';
       estadoAtualSistema = INICIO;
     }
-    // estados de teste
-    else if (teclaAtual == '5') // apaga todas digitais (teste)
-    {
-      estadoAtualSistema = INICIO;
-      teclaAtual = '\0';
-      digital.apagarTodasDigitais();
-    }
-    else if (teclaAtual == '6') // cadastro via foto (teste)
-    {
-      estadoAtualSistema = CADASTRO_PREPARAR_PARA_FOTO;
-      teclaAtual = '\0';
-    }
+    // // estados de teste
+    // else if (teclaAtual == '5') // apaga todas digitais (teste)
+    // {
+    //   estadoAtualSistema = INICIO;
+    //   teclaAtual = '\0';
+    //   digital.apagarTodasDigitais();
+    // }
+    // else if (teclaAtual == '6') // cadastro via foto (teste)
+    // {
+    //   estadoAtualSistema = CADASTRO_PREPARAR_PARA_FOTO;
+    //   teclaAtual = '\0';
+    // }
   }
 
   else if (estadoAtualSistema == CADASTRO_DIGITANDO_NOME) // cadastro do nome do usuario via teclado

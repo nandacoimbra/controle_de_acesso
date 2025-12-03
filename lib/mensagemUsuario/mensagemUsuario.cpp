@@ -163,7 +163,6 @@ void MensagemUsuario::telaMenuMaster()
     tela += "2 - Cadastrar usuario\n";
     tela += "3 - Remover usuario\n";
     tela += "4 - Menu inicial\n";
-    // tela += "5 - Apagar Digitais";
     telaPrincipal.desenhaTexto(tela);
     telaSecundaria.desenhaTexto(tela);
 }

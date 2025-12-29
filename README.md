@@ -1,6 +1,6 @@
 ## Controle de Acesso a Ambientes por Reconhecimento Facial
 Este projeto consiste no desenvolvimento de um protótipo de sistema embarcado de controle de acesso a ambientes, capaz de autenticar usuários via reconhecimento facial, biometria (impressão digital) e senha numérica.
-A arquitetura do hardware é centrada no microcontrolador **ESP32-WROOM-32U**, responsável pelo gerenciamento de periféricos (**teclado, display OLED, relé e leitor biométrico**) e pelo armazenamento de **logs** de acesso em cartão SD. O reconhecimento facial é processado externamente por um módulo inteligente (Single Board Computer/**TV Box** com Linux Armbian), que executa algoritmos de **visão computacional** em Python e comunica-se com o controlador principal via interface Serial (UART).
+A arquitetura do hardware é centrada no microcontrolador **ESP32-WROOM-32U**, responsável pelo gerenciamento de periféricos (**teclado, display OLED, relé e leitor biométrico**) e pelo armazenamento de **logs** de acesso em cartão SD. O reconhecimento facial é processado externamente por um módulo inteligente (Single Board Computer/**TV Box** com Linux Armbian), que executa algoritmos de **visão computacional** em Python e comunica-se com o controlador principal via interface Serial (UART). Vídeo do protótipo final: https://www.youtube.com/watch?v=7OTgbEgAXRU&list=PLtn4Sv8Hu2Zzf-eZot-XWZFwP5ZhO-jWc.
 
 (Veja o código do Módulo de Reconhecimento Facial [aqui](https://github.com/nandacoimbra/Reconhecimento-Facial)
 
@@ -10,9 +10,7 @@ O sistema foi desenvolvido como Trabalho de Conclusão de Curso (TCC) em Engenha
   <img width="500" height="800" alt="FluxogramaTCC-Fluxo Geral drawio" src="https://github.com/user-attachments/assets/513296d5-fb62-4866-9b06-9cd6f60a85f2"/> 
   <img width="500" height="800" alt="FluxogramaTCC-Fluxo Geral drawio" src="https://github.com/user-attachments/assets/58b7ea5a-55db-445a-be53-2354aeb45499"/> 
 </div>
-
-
-(Vídeo do protótipo final: https://www.youtube.com/watch?v=7OTgbEgAXRU&list=PLtn4Sv8Hu2Zzf-eZot-XWZFwP5ZhO-jWc)
+(Protótipo final)
 
 **Autora:** Fernanda Souza Coimbra Machado  
 **Orientador:** Prof. Matusalém Martins Lanes
